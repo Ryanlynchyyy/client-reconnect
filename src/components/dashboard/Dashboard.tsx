@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useFollowUp } from '@/contexts/FollowUpContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,6 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { PatientWithFollowUpStatus } from '@/types/clinikoTypes';
 import { Check, Clock, MessageSquare, RefreshCw } from 'lucide-react';
 import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 const Dashboard: React.FC = () => {
   const { 
@@ -24,26 +24,20 @@ const Dashboard: React.FC = () => {
   } = useFollowUp();
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Filter patients by search term
   const searchResults = searchTerm ? 
     filteredPatients.filter(patient => 
       `${patient.first_name} ${patient.last_name}`.toLowerCase().includes(searchTerm.toLowerCase())
     ) : filteredPatients;
 
-  // Handle refreshing data
   const handleRefresh = async () => {
     await refreshData();
   };
 
-  // Handle SMS sending (to be implemented with Twilio integration)
   const handleSendSMS = (patient: PatientWithFollowUpStatus) => {
-    // This will be implemented with Twilio
     console.log('Sending SMS to:', patient);
     markAsContacted(patient.id);
-    // For now, just mark as contacted
   };
 
-  // Group patients by days since last appointment
   const groupedPatients = searchResults.reduce<Record<string, PatientWithFollowUpStatus[]>>(
     (acc, patient) => {
       if (patient.daysSinceLastAppointment === null) return acc;
@@ -80,7 +74,6 @@ const Dashboard: React.FC = () => {
         </Button>
       </div>
       
-      {/* Filter & Search */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card>
           <CardHeader className="pb-2">
@@ -129,7 +122,6 @@ const Dashboard: React.FC = () => {
         </Card>
       </div>
       
-      {/* Error message */}
       {error && (
         <Card className="border-red-200 bg-red-50">
           <CardContent className="pt-6">
@@ -138,7 +130,6 @@ const Dashboard: React.FC = () => {
         </Card>
       )}
       
-      {/* Loading state */}
       {isLoading && (
         <div className="space-y-4">
           <Card>
@@ -154,7 +145,6 @@ const Dashboard: React.FC = () => {
         </div>
       )}
       
-      {/* Patient groups */}
       {!isLoading && !error && (
         <Tabs defaultValue="all" className="w-full">
           <TabsList className="mb-4">
