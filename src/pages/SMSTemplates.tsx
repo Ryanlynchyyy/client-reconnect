@@ -1,17 +1,17 @@
 
 import React from 'react';
 import AppLayout from '@/components/layout/AppLayout';
-import Dashboard from '@/components/dashboard/Dashboard';
+import SmsTemplates from '@/components/sms/SmsTemplates';
 import { FollowUpProvider } from '@/contexts/FollowUpContext';
 
-const Index = () => {
+const SMSTemplatesPage = () => {
   return (
     <FollowUpProvider>
       <AppLayout>
-        <Dashboard />
+        <SmsTemplates />
       </AppLayout>
     </FollowUpProvider>
   );
 };
 
-export default Index;
+export default SMSTemplatesPage;

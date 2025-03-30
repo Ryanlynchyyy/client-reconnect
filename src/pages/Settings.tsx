@@ -1,17 +1,17 @@
 
 import React from 'react';
 import AppLayout from '@/components/layout/AppLayout';
-import Dashboard from '@/components/dashboard/Dashboard';
+import SettingsComponent from '@/components/settings/Settings';
 import { FollowUpProvider } from '@/contexts/FollowUpContext';
 
-const Index = () => {
+const Settings = () => {
   return (
     <FollowUpProvider>
       <AppLayout>
-        <Dashboard />
+        <SettingsComponent />
       </AppLayout>
     </FollowUpProvider>
   );
 };
 
-export default Index;
+export default Settings;

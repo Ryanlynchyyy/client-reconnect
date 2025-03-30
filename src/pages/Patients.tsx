@@ -1,17 +1,17 @@
 
 import React from 'react';
 import AppLayout from '@/components/layout/AppLayout';
-import Dashboard from '@/components/dashboard/Dashboard';
+import PatientsComponent from '@/components/patients/Patients';
 import { FollowUpProvider } from '@/contexts/FollowUpContext';
 
-const Index = () => {
+const Patients = () => {
   return (
     <FollowUpProvider>
       <AppLayout>
-        <Dashboard />
+        <PatientsComponent />
       </AppLayout>
     </FollowUpProvider>
   );
 };
 
-export default Index;
+export default Patients;
