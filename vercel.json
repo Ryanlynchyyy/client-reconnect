@@ -7,8 +7,9 @@
   },
   "routes": [
     {
-      "src": "/api/(.*)",
-      "dest": "/api/cliniko.js"
+      "src": "/api/cliniko",
+      "methods": ["POST"],
+      "dest": "api/cliniko.js"
     }
   ]
 }
