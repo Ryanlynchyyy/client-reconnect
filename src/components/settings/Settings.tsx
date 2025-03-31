@@ -6,6 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import { clinikoApi } from '@/services/clinikoApi';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { InfoIcon } from 'lucide-react';
 
 const Settings: React.FC = () => {
   const { toast } = useToast();
@@ -36,6 +38,12 @@ const Settings: React.FC = () => {
     setIsTestingApi(true);
     
     try {
+      console.log("Testing Cliniko API connection with:", {
+        baseUrl,
+        apiKeyLength: apiKey.length,
+        userAgent
+      });
+      
       // Temporarily update credentials for testing
       clinikoApi.updateCredentials(baseUrl, apiKey, userAgent);
       
@@ -65,6 +73,13 @@ const Settings: React.FC = () => {
         <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
         <p className="text-gray-600">Configure your Cliniko API connection</p>
       </div>
+      
+      <Alert>
+        <InfoIcon className="h-4 w-4" />
+        <AlertDescription>
+          Make sure your API key matches the region in the Base URL (e.g., an API key ending with "-au2" should use the au2 region).
+        </AlertDescription>
+      </Alert>
       
       <Card>
         <CardHeader>

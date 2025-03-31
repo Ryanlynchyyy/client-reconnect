@@ -23,8 +23,9 @@ class ClinikoApiService {
   }
 
   private getHeaders() {
-    // Basic auth requires the API key followed by a colon
+    // For Cliniko API, the key is used as the username with an empty password (followed by a colon)
     const encodedKey = btoa(`${this.apiKey}:`);
+    
     return {
       'Authorization': `Basic ${encodedKey}`,
       'User-Agent': this.userAgent,
