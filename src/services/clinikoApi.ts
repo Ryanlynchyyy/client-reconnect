@@ -23,9 +23,11 @@ class ClinikoApiService {
   }
 
   private getHeaders() {
-    // The API key is used directly as a token
+    // Properly format the API key for Basic Auth - Key: followed by empty password
+    const encodedKey = btoa(`${this.apiKey}:`);
+    
     return {
-      'Authorization': `Basic ${this.apiKey}`,
+      'Authorization': `Basic ${encodedKey}`,
       'User-Agent': this.userAgent,
       'Accept': 'application/json',
       'Content-Type': 'application/json'
@@ -36,31 +38,37 @@ class ClinikoApiService {
     let nextUrl = url;
     let allItems: T[] = [];
     
-    while (nextUrl) {
-      // Use no-cors mode to handle potential CORS issues
-      const response = await fetch(nextUrl, {
-        method: 'GET',
-        headers: this.getHeaders(),
-        mode: 'cors', // Ensure CORS is enabled
-        credentials: 'omit' // Don't send cookies, which can cause issues with cross-origin requests
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('API Error:', response.status, errorText);
-        throw new Error(`API request failed with status ${response.status}: ${errorText}`);
+    try {
+      while (nextUrl) {
+        console.log(`Fetching: ${nextUrl}`);
+        
+        const response = await fetch(nextUrl, {
+          method: 'GET',
+          headers: this.getHeaders(),
+          mode: 'cors',
+          credentials: 'omit'
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('API Error:', response.status, errorText);
+          throw new Error(`API request failed with status ${response.status}: ${errorText}`);
+        }
+        
+        const data = await response.json() as ClinikoApiResponse<T>;
+        
+        if (data._embedded && data._embedded[resourceType]) {
+          allItems = [...allItems, ...data._embedded[resourceType]];
+        }
+        
+        nextUrl = data._links && data._links.next ? data._links.next : '';
       }
       
-      const data = await response.json() as ClinikoApiResponse<T>;
-      
-      if (data._embedded && data._embedded[resourceType]) {
-        allItems = [...allItems, ...data._embedded[resourceType]];
-      }
-      
-      nextUrl = data._links && data._links.next ? data._links.next : '';
+      return allItems;
+    } catch (error) {
+      console.error('Error in fetchAllPages:', error);
+      throw error;
     }
-    
-    return allItems;
   }
 
   async getPatients(): Promise<ClinikoPatient[]> {

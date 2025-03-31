@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import { clinikoApi } from '@/services/clinikoApi';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { InfoIcon, AlertCircle } from 'lucide-react';
+import { InfoIcon, AlertCircle, HelpCircle } from 'lucide-react';
 
 const Settings: React.FC = () => {
   const { toast } = useToast();
@@ -19,11 +19,16 @@ const Settings: React.FC = () => {
 
   const handleSaveSettings = () => {
     try {
-      // Format API key if needed - API key should not include Basic prefix
-      const formattedKey = apiKey.startsWith('Basic ') ? apiKey : apiKey;
+      // Clear any API errors when saving
+      setApiError(null);
+      
+      // Make sure the API key doesn't contain "Basic " prefix (user might copy from elsewhere)
+      let formattedKey = apiKey;
+      if (formattedKey.startsWith('Basic ')) {
+        formattedKey = formattedKey.substring(6);
+      }
       
       clinikoApi.updateCredentials(baseUrl, formattedKey, userAgent);
-      setApiError(null);
       
       toast({
         title: "Settings saved",
@@ -51,7 +56,12 @@ const Settings: React.FC = () => {
       });
       
       // Temporarily update credentials for testing
-      clinikoApi.updateCredentials(baseUrl, apiKey, userAgent);
+      let formattedKey = apiKey;
+      if (formattedKey.startsWith('Basic ')) {
+        formattedKey = formattedKey.substring(6);
+      }
+      
+      clinikoApi.updateCredentials(baseUrl, formattedKey, userAgent);
       
       // Try to fetch a single practitioner as a test
       const practitioners = await clinikoApi.getPractitioners();
@@ -68,7 +78,7 @@ const Settings: React.FC = () => {
       
       toast({
         title: "Connection failed",
-        description: "Could not connect to Cliniko API. Please check your settings.",
+        description: "Could not connect to Cliniko API. Please check your settings and the error details below.",
         variant: "destructive",
       });
     } finally {
@@ -87,6 +97,8 @@ const Settings: React.FC = () => {
         <InfoIcon className="h-4 w-4" />
         <AlertDescription>
           Make sure your API key matches the region in the Base URL (e.g., an API key ending with "-au2" should use the au2 region).
+          <br />
+          Your API key should look like: <code className="bg-gray-100 px-1 py-0.5 rounded">MS-XXXXX-au2</code> (NOT prefixed with "Basic").
         </AlertDescription>
       </Alert>
       
@@ -95,6 +107,14 @@ const Settings: React.FC = () => {
           <AlertCircle className="h-4 w-4" />
           <AlertDescription className="text-red-800">
             {apiError}
+            <div className="mt-2 text-sm">
+              <p>Common issues:</p>
+              <ul className="list-disc pl-5 space-y-1">
+                <li>Make sure your API key is correct and active</li>
+                <li>Check that the region in your API key matches your base URL (au2)</li>
+                <li>Ensure your account has API access enabled</li>
+              </ul>
+            </div>
           </AlertDescription>
         </Alert>
       )}
@@ -132,7 +152,7 @@ const Settings: React.FC = () => {
             />
             <p className="text-xs text-gray-500">
               Never share your API key with anyone. It provides full access to your Cliniko account.
-              Make sure to paste the complete API key (e.g. MS-XXXXX-au2).
+              Enter the raw API key (e.g., MS-XXXXX-au2) without any "Basic" prefix.
             </p>
           </div>
           
