@@ -1,8 +1,8 @@
-
 import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
 import { PatientWithFollowUpStatus, ClinikoAppointment, ClinikoPatient } from '@/types/clinikoTypes';
 import { clinikoApi } from '@/services/clinikoApi';
 import { useToast } from '@/components/ui/use-toast';
+import { getMockData } from '@/data/mockData';
 
 interface FollowUpContextType {
   patients: PatientWithFollowUpStatus[];
@@ -25,74 +25,36 @@ export const FollowUpProvider: React.FC<{ children: ReactNode }> = ({ children }
   const [filterDays, setFilterDays] = useState<number>(30);
   const { toast } = useToast();
 
-  // Filter patients based on days since last appointment
   const filteredPatients = React.useMemo(() => {
     return patients.filter(patient => {
-      // If they have a future appointment, don't include them
       if (patient.hasFutureAppointment) return false;
-      
-      // If they've been dismissed, don't include them
       if (patient.followUpStatus === 'dismissed') return false;
-      
-      // If they've been contacted, still include them for reference
-      
-      // Filter by days since last appointment
       return patient.daysSinceLastAppointment !== null && 
              patient.daysSinceLastAppointment >= filterDays;
     });
   }, [patients, filterDays]);
 
-  // Function to load example data
   const loadExampleData = async () => {
     try {
-      // Use our proxy with the example data flag
-      const response = await fetch('/api/cliniko', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          useExampleData: true,
-          endpoint: 'patients'
-        })
-      });
+      console.log('Loading example data directly from mock data');
       
-      if (!response.ok) {
-        throw new Error('Failed to load example data');
-      }
+      const patientResponse = getMockData('patients');
+      const patients = patientResponse._embedded.patients as ClinikoPatient[];
       
-      const responseData = await response.json();
-      const patients = responseData.data._embedded.patients as ClinikoPatient[];
-      
-      // Process example patient data to add appointment info
       const processedPatients = await Promise.all(patients.map(async (patient) => {
-        const appointmentResponse = await fetch('/api/cliniko', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            useExampleData: true,
-            endpoint: `patients/${patient.id}/appointments`
-          })
-        });
+        const appointmentData = getMockData(`patients/${patient.id}/appointments`);
+        const appointments = appointmentData._embedded.appointments as ClinikoAppointment[];
         
-        if (!appointmentResponse.ok) {
-          throw new Error(`Failed to load appointments for patient ${patient.id}`);
-        }
-        
-        const appointmentData = await appointmentResponse.json();
-        const appointments = appointmentData.data._embedded.appointments as ClinikoAppointment[];
-        
-        // Sort by date descending
         appointments.sort(
           (a, b) => new Date(b.starts_at).getTime() - new Date(a.starts_at).getTime()
         );
         
         const now = new Date();
         
-        // Check for future appointments
         const hasFutureAppointment = appointments.some(
           app => new Date(app.starts_at) > now
         );
         
-        // Find most recent past appointment
         const lastAppointment = appointments.find(
           app => new Date(app.starts_at) <= now
         );
@@ -108,7 +70,6 @@ export const FollowUpProvider: React.FC<{ children: ReactNode }> = ({ children }
           assignedPractitionerId = lastAppointment.practitioner?.id;
         }
         
-        // Get random follow-up status - mostly pending but some contacted
         const followUpStatus = Math.random() < 0.8 ? 'pending' : 'contacted';
         
         return {
@@ -122,6 +83,7 @@ export const FollowUpProvider: React.FC<{ children: ReactNode }> = ({ children }
       }));
       
       setPatients(processedPatients);
+      setError(null);
     } catch (err) {
       console.error('Failed to load example data:', err);
       setError('Failed to load example data. Try again or check your API settings.');
@@ -130,35 +92,28 @@ export const FollowUpProvider: React.FC<{ children: ReactNode }> = ({ children }
     }
   };
 
-  // Function to process patient appointments and determine follow-up status
   const processPatientData = async (patients: ClinikoPatient[]): Promise<PatientWithFollowUpStatus[]> => {
     const now = new Date();
     const followUpStatuses = JSON.parse(localStorage.getItem('followup_statuses') || '{}');
     
-    // Process each patient in sequence to avoid overwhelming the API
     const processedPatients: PatientWithFollowUpStatus[] = [];
     
     for (const patient of patients) {
       try {
-        // Get patient's appointment history
         const appointments = await clinikoApi.getPatientAppointments(patient.id);
         
-        // Filter out cancelled or no-shows
         const validAppointments = appointments.filter(
           app => !app.cancelled_at && !app.did_not_arrive
         );
         
-        // Sort by date descending
         validAppointments.sort(
           (a, b) => new Date(b.starts_at).getTime() - new Date(a.starts_at).getTime()
         );
         
-        // Check for future appointments
         const hasFutureAppointment = validAppointments.some(
           app => new Date(app.starts_at) > now
         );
         
-        // Find most recent past appointment
         const lastAppointment = validAppointments.find(
           app => new Date(app.starts_at) <= now
         );
@@ -174,7 +129,6 @@ export const FollowUpProvider: React.FC<{ children: ReactNode }> = ({ children }
           assignedPractitionerId = lastAppointment.practitioner.id;
         }
         
-        // Get previous follow-up status if it exists
         const savedStatus = followUpStatuses[patient.id] || 'pending';
         
         processedPatients.push({
@@ -198,34 +152,34 @@ export const FollowUpProvider: React.FC<{ children: ReactNode }> = ({ children }
       setIsLoading(true);
       setError(null);
       
-      // Check if API key is set
       if (!localStorage.getItem('cliniko_api_key')) {
         console.log('No API key found, loading example data instead');
         await loadExampleData();
         return;
       }
       
-      // Get all patients
       const patients = await clinikoApi.getPatients();
       
-      // Process patient data to determine follow-up status
       const processedPatients = await processPatientData(patients);
       
       setPatients(processedPatients);
     } catch (err) {
       console.error('Failed to load data:', err);
       setError('Failed to load patient data. Check your API settings and try again.');
+      
+      console.log('Falling back to example data');
+      await loadExampleData();
+      
       toast({
-        title: "Error loading data",
-        description: "There was a problem connecting to Cliniko API.",
-        variant: "destructive",
+        title: "Using example data",
+        description: "Could not connect to Cliniko API. Showing example data instead.",
+        variant: "default",
       });
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Save status changes to localStorage
   const updateFollowUpStatus = (patientId: number, status: 'pending' | 'dismissed' | 'contacted') => {
     const statuses = JSON.parse(localStorage.getItem('followup_statuses') || '{}');
     statuses[patientId] = status;
@@ -236,7 +190,6 @@ export const FollowUpProvider: React.FC<{ children: ReactNode }> = ({ children }
     ));
   };
 
-  // Actions for patient follow-ups
   const dismissPatient = (patientId: number) => {
     updateFollowUpStatus(patientId, 'dismissed');
     toast({
@@ -253,7 +206,6 @@ export const FollowUpProvider: React.FC<{ children: ReactNode }> = ({ children }
     });
   };
 
-  // Load data on initial mount
   useEffect(() => {
     loadData();
   }, []);
