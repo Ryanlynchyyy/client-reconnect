@@ -1,7 +1,7 @@
 
 // api/cliniko.js (Node 18 runtime)
 export default async function handler(req, res) {
-  // Set CORS headers if needed (for local dev or other domains):
+  // Set CORS headers if needed (for local dev or other domains)
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
@@ -12,33 +12,58 @@ export default async function handler(req, res) {
   }
 
   // Check if this is a demo/example data request
-  const { useExampleData } = req.body;
+  const { useExampleData, endpoint, params, apiKey, userAgent } = req.body;
+  
   if (useExampleData) {
     return res.status(200).json({ 
-      data: getMockData(req.body.endpoint)
+      data: getMockData(endpoint)
     });
   }
   
-  // Prepare Basic Auth header for Cliniko API
-  const apiKey = process.env.CLINIKO_API_KEY;  // (Store your Cliniko API key in Vercel env)
-  const authHeader = 'Basic ' + Buffer.from(apiKey + ':').toString('base64');
+  if (!apiKey) {
+    return res.status(400).json({ error: "Missing API key" });
+  }
   
-  // Forward the request to Cliniko API
   try {
-    const clinikoResponse = await fetch('https://api.cliniko.com/v1/your-endpoint', {
-      method: 'POST',
+    // Construct URL with endpoint and query parameters
+    let url = `https://api.au2.cliniko.com/v1/${endpoint}`;
+    if (params) {
+      const queryParams = new URLSearchParams();
+      Object.entries(params).forEach(([key, value]) => {
+        queryParams.append(key, value?.toString() || '');
+      });
+      url = `${url}?${queryParams.toString()}`;
+    }
+    
+    // Prepare Basic Auth header for Cliniko API
+    const authHeader = 'Basic ' + Buffer.from(apiKey + ':').toString('base64');
+    
+    // Make request to Cliniko API
+    console.log(`Making request to: ${url}`);
+    const clinikoResponse = await fetch(url, {
+      method: 'GET',
       headers: {
-        'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'Authorization': authHeader
-      },
-      body: req.body
+        'Authorization': authHeader,
+        'User-Agent': userAgent || 'ClinikoFollowUp (ryan@ryflow.com.au)'
+      }
     });
+    
+    if (!clinikoResponse.ok) {
+      const errorData = await clinikoResponse.text();
+      console.error(`Cliniko API error (${clinikoResponse.status}):`, errorData);
+      
+      return res.status(clinikoResponse.status).json({
+        error: `Cliniko API returned ${clinikoResponse.status}`,
+        details: errorData
+      });
+    }
+    
     const data = await clinikoResponse.json();
-    res.status(clinikoResponse.status).json(data);
+    return res.status(200).json({ data });
   } catch (err) {
     console.error('Cliniko proxy error:', err);
-    res.status(500).json({ error: 'Internal Server Error' });
+    return res.status(500).json({ error: 'Internal Server Error', details: err.message });
   }
 }
 
