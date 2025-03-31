@@ -2,14 +2,16 @@
   "version": 2,
   "functions": {
     "api/cliniko.js": {
-      "runtime": "nodejs18.x"  // Change this to "nodejs18.x" in lowercase *only* if the error persists
+      "runtime": "@vercel/node@18.x",
+      "memory": 256,
+      "maxDuration": 10
     }
   },
-  "routes": [
+  "builds": [
     {
-      "src": "/api/cliniko",
-      "methods": ["POST"],
-      "dest": "/api/cliniko.js"
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": { "distDir": "dist" }
     }
   ]
 }
