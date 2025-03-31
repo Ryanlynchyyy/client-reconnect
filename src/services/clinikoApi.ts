@@ -34,6 +34,62 @@ class ClinikoApiService {
     };
   }
 
+  // TEST CONNECTION FUNCTION - We'll use this specifically for testing the API connection
+  async testConnection(): Promise<{ success: boolean; message: string; details?: any }> {
+    try {
+      console.log("Testing connection with headers:", {
+        baseUrl: this.baseUrl,
+        apiKeyLength: this.apiKey.length,
+        userAgent: this.userAgent
+      });
+      
+      // Try to fetch practitioners as a test
+      const response = await fetch(`${this.baseUrl}/practitioners`, {
+        method: 'GET',
+        headers: this.getHeaders(),
+        mode: 'cors',
+        credentials: 'omit'
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('API Test Error:', response.status, errorText);
+        
+        return {
+          success: false,
+          message: `API request failed with status ${response.status}`,
+          details: errorText
+        };
+      }
+      
+      const data = await response.json();
+      const practitionerCount = data._embedded && data._embedded.practitioners ? 
+        data._embedded.practitioners.length : 0;
+      
+      return {
+        success: true,
+        message: `Successfully connected to Cliniko API. Found ${practitionerCount} practitioners.`
+      };
+    } catch (error) {
+      console.error('Connection test error:', error);
+      
+      // Specific error for CORS issues
+      if (error instanceof TypeError && error.message === 'Failed to fetch') {
+        return {
+          success: false,
+          message: "CORS Error: Cannot access Cliniko API directly from browser",
+          details: "The Cliniko API does not support direct browser access due to CORS restrictions. Consider using a backend proxy or serverless function to make these requests."
+        };
+      }
+      
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Unknown error occurred',
+        details: error
+      };
+    }
+  }
+
   async fetchAllPages<T>(url: string, resourceType: string): Promise<T[]> {
     let nextUrl = url;
     let allItems: T[] = [];
@@ -67,6 +123,16 @@ class ClinikoApiService {
       return allItems;
     } catch (error) {
       console.error('Error in fetchAllPages:', error);
+      
+      // Enhance error message for CORS issues
+      if (error instanceof TypeError && error.message === 'Failed to fetch') {
+        throw new Error(
+          "CORS Error: Cannot access Cliniko API directly from browser. " +
+          "The Cliniko API blocks direct requests from browsers. " +
+          "Please implement a backend proxy to make these requests."
+        );
+      }
+      
       throw error;
     }
   }
