@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import { clinikoApi } from '@/services/clinikoApi';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { InfoIcon, AlertCircle, HelpCircle, ExternalLink } from 'lucide-react';
+import { InfoIcon, AlertCircle, CheckCircle, ExternalLink } from 'lucide-react';
 
 const Settings: React.FC = () => {
   const { toast } = useToast();
@@ -16,13 +16,15 @@ const Settings: React.FC = () => {
   const [userAgent, setUserAgent] = useState(localStorage.getItem('cliniko_user_agent') || 'ClinikoFollowUp (ryan@ryflow.com.au)');
   const [isTestingApi, setIsTestingApi] = useState<boolean>(false);
   const [apiError, setApiError] = useState<string | null>(null);
-  const [corsError, setCorsError] = useState<boolean>(false);
+  const [testSuccess, setTestSuccess] = useState<boolean>(false);
+  const [testMessage, setTestMessage] = useState<string | null>(null);
 
   const handleSaveSettings = () => {
     try {
-      // Clear any API errors when saving
+      // Clear any API errors and success states when saving
       setApiError(null);
-      setCorsError(false);
+      setTestSuccess(false);
+      setTestMessage(null);
       
       // Make sure the API key doesn't contain "Basic " prefix (user might copy from elsewhere)
       let formattedKey = apiKey;
@@ -49,7 +51,8 @@ const Settings: React.FC = () => {
   const handleTestConnection = async () => {
     setIsTestingApi(true);
     setApiError(null);
-    setCorsError(false);
+    setTestSuccess(false);
+    setTestMessage(null);
     
     try {
       console.log("Testing Cliniko API connection with:", {
@@ -66,10 +69,13 @@ const Settings: React.FC = () => {
       
       clinikoApi.updateCredentials(baseUrl, formattedKey, userAgent);
       
-      // Use the new testConnection method
+      // Use the testConnection method
       const result = await clinikoApi.testConnection();
       
       if (result.success) {
+        setTestSuccess(true);
+        setTestMessage(result.message);
+        
         toast({
           title: "Connection successful",
           description: result.message,
@@ -77,11 +83,6 @@ const Settings: React.FC = () => {
         });
       } else {
         setApiError(result.message);
-        
-        // Check if it's a CORS error
-        if (result.message.includes("CORS Error")) {
-          setCorsError(true);
-        }
         
         toast({
           title: "Connection failed",
@@ -93,11 +94,6 @@ const Settings: React.FC = () => {
       console.error('API test failed:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       setApiError(errorMessage);
-      
-      // Check if it's a CORS error
-      if (errorMessage.includes("CORS Error")) {
-        setCorsError(true);
-      }
       
       toast({
         title: "Connection failed",
@@ -125,37 +121,7 @@ const Settings: React.FC = () => {
         </AlertDescription>
       </Alert>
       
-      {corsError && (
-        <Alert variant="destructive" className="bg-red-50 border-red-200">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription className="text-red-800">
-            <div className="font-bold mb-2">CORS Error: Cannot access Cliniko API directly from a browser</div>
-            <p className="mb-3">
-              The Cliniko API blocks direct requests from web browsers due to Cross-Origin Resource Sharing (CORS) restrictions.
-            </p>
-            <div className="mt-2 text-sm">
-              <p className="font-semibold mb-1">To fix this issue:</p>
-              <ul className="list-disc pl-5 space-y-2">
-                <li>Create a backend proxy or serverless function to make API requests to Cliniko</li>
-                <li>Update this application to call your proxy instead of the Cliniko API directly</li>
-                <li>Your API key and credentials will still work - they just need to be used from a server environment</li>
-              </ul>
-              <p className="mt-3">
-                <a 
-                  href="https://developer.cliniko.com/docs" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="flex items-center text-blue-700 hover:text-blue-900 font-medium"
-                >
-                  Cliniko API Documentation <ExternalLink className="h-3 w-3 ml-1" />
-                </a>
-              </p>
-            </div>
-          </AlertDescription>
-        </Alert>
-      )}
-      
-      {apiError && !corsError && (
+      {apiError && (
         <Alert variant="destructive" className="bg-red-50 border-red-200">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription className="text-red-800">
@@ -171,12 +137,22 @@ const Settings: React.FC = () => {
           </AlertDescription>
         </Alert>
       )}
+
+      {testSuccess && testMessage && (
+        <Alert className="bg-green-50 border-green-200">
+          <CheckCircle className="h-4 w-4 text-green-600" />
+          <AlertDescription className="text-green-800">
+            {testMessage}
+          </AlertDescription>
+        </Alert>
+      )}
       
       <Card>
         <CardHeader>
           <CardTitle>Cliniko API Configuration</CardTitle>
           <CardDescription>
             Enter your Cliniko API credentials. You can find these in your Cliniko account under Settings &gt; API.
+            The app will use a secure proxy to connect to Cliniko.
           </CardDescription>
         </CardHeader>
         

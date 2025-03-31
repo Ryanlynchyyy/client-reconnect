@@ -1,0 +1,8 @@
+
+{
+  "functions": {
+    "api/cliniko.js": {
+      "runtime": "nodejs18.x"
+    }
+  }
+}

@@ -5,11 +5,13 @@ class ClinikoApiService {
   private baseUrl: string;
   private apiKey: string;
   private userAgent: string;
+  private proxyUrl: string;
   
   constructor() {
     this.baseUrl = localStorage.getItem('cliniko_base_url') || 'https://api.au2.cliniko.com/v1';
     this.apiKey = localStorage.getItem('cliniko_api_key') || '';
     this.userAgent = localStorage.getItem('cliniko_user_agent') || 'ClinikoFollowUp (ryan@ryflow.com.au)';
+    this.proxyUrl = '/api/cliniko'; // Our Vercel serverless function
   }
 
   updateCredentials(baseUrl: string, apiKey: string, userAgent: string) {
@@ -23,46 +25,44 @@ class ClinikoApiService {
   }
 
   private getHeaders() {
-    // Properly format the API key for Basic Auth - Key: followed by empty password
-    const encodedKey = btoa(`${this.apiKey}:`);
-    
     return {
-      'Authorization': `Basic ${encodedKey}`,
-      'User-Agent': this.userAgent,
-      'Accept': 'application/json',
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
     };
   }
 
   // TEST CONNECTION FUNCTION - We'll use this specifically for testing the API connection
   async testConnection(): Promise<{ success: boolean; message: string; details?: any }> {
     try {
-      console.log("Testing connection with headers:", {
+      console.log("Testing connection with credentials:", {
         baseUrl: this.baseUrl,
         apiKeyLength: this.apiKey.length,
         userAgent: this.userAgent
       });
       
-      // Try to fetch practitioners as a test
-      const response = await fetch(`${this.baseUrl}/practitioners`, {
-        method: 'GET',
+      // Use our proxy to test connection to Cliniko
+      const response = await fetch(this.proxyUrl, {
+        method: 'POST',
         headers: this.getHeaders(),
-        mode: 'cors',
-        credentials: 'omit'
+        body: JSON.stringify({
+          apiKey: this.apiKey,
+          endpoint: 'practitioners',
+          userAgent: this.userAgent
+        })
       });
       
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('API Test Error:', response.status, errorText);
+        const errorData = await response.json();
+        console.error('API Test Error:', response.status, errorData);
         
         return {
           success: false,
           message: `API request failed with status ${response.status}`,
-          details: errorText
+          details: errorData
         };
       }
       
-      const data = await response.json();
+      const responseData = await response.json();
+      const data = responseData.data;
       const practitionerCount = data._embedded && data._embedded.practitioners ? 
         data._embedded.practitioners.length : 0;
       
@@ -73,15 +73,6 @@ class ClinikoApiService {
     } catch (error) {
       console.error('Connection test error:', error);
       
-      // Specific error for CORS issues
-      if (error instanceof TypeError && error.message === 'Failed to fetch') {
-        return {
-          success: false,
-          message: "CORS Error: Cannot access Cliniko API directly from browser",
-          details: "The Cliniko API does not support direct browser access due to CORS restrictions. Consider using a backend proxy or serverless function to make these requests."
-        };
-      }
-      
       return {
         success: false,
         message: error instanceof Error ? error.message : 'Unknown error occurred',
@@ -90,77 +81,83 @@ class ClinikoApiService {
     }
   }
 
-  async fetchAllPages<T>(url: string, resourceType: string): Promise<T[]> {
-    let nextUrl = url;
+  async fetchAllPages<T>(endpoint: string, resourceType: string, params?: Record<string, string>): Promise<T[]> {
     let allItems: T[] = [];
+    let page = 1;
+    let hasMorePages = true;
     
     try {
-      while (nextUrl) {
-        console.log(`Fetching: ${nextUrl}`);
+      while (hasMorePages) {
+        console.log(`Fetching page ${page} of ${endpoint}`);
         
-        const response = await fetch(nextUrl, {
-          method: 'GET',
+        // Include pagination in params
+        const pageParams = { 
+          ...(params || {}), 
+          page: page.toString(),
+        };
+        
+        const response = await fetch(this.proxyUrl, {
+          method: 'POST',
           headers: this.getHeaders(),
-          mode: 'cors',
-          credentials: 'omit'
+          body: JSON.stringify({
+            apiKey: this.apiKey,
+            endpoint: endpoint,
+            params: pageParams,
+            userAgent: this.userAgent
+          })
         });
         
         if (!response.ok) {
-          const errorText = await response.text();
-          console.error('API Error:', response.status, errorText);
-          throw new Error(`API request failed with status ${response.status}: ${errorText}`);
+          const errorData = await response.json();
+          console.error('API Error:', response.status, errorData);
+          throw new Error(`API request failed with status ${response.status}`);
         }
         
-        const data = await response.json() as ClinikoApiResponse<T>;
+        const responseData = await response.json();
+        const data = responseData.data as ClinikoApiResponse<T>;
         
         if (data._embedded && data._embedded[resourceType]) {
           allItems = [...allItems, ...data._embedded[resourceType]];
         }
         
-        nextUrl = data._links && data._links.next ? data._links.next : '';
+        // Check if there's a next page
+        hasMorePages = data._links && data._links.next ? true : false;
+        page++;
+        
+        // Safety mechanism to avoid infinite loops
+        if (page > 100) {
+          console.warn('Reached maximum page limit (100). Stopping pagination.');
+          break;
+        }
       }
       
       return allItems;
     } catch (error) {
       console.error('Error in fetchAllPages:', error);
-      
-      // Enhance error message for CORS issues
-      if (error instanceof TypeError && error.message === 'Failed to fetch') {
-        throw new Error(
-          "CORS Error: Cannot access Cliniko API directly from browser. " +
-          "The Cliniko API blocks direct requests from browsers. " +
-          "Please implement a backend proxy to make these requests."
-        );
-      }
-      
       throw error;
     }
   }
 
   async getPatients(): Promise<ClinikoPatient[]> {
-    return this.fetchAllPages<ClinikoPatient>(`${this.baseUrl}/patients`, 'patients');
+    return this.fetchAllPages<ClinikoPatient>('patients', 'patients');
   }
 
   async getPatientAppointments(patientId: number): Promise<ClinikoAppointment[]> {
     return this.fetchAllPages<ClinikoAppointment>(
-      `${this.baseUrl}/patients/${patientId}/appointments`, 
+      `patients/${patientId}/appointments`, 
       'appointments'
     );
   }
 
   async getPractitioners(): Promise<ClinikioPractitioner[]> {
     return this.fetchAllPages<ClinikioPractitioner>(
-      `${this.baseUrl}/practitioners`,
+      'practitioners',
       'practitioners'
     );
   }
 
-  async getAllAppointments(params?: URLSearchParams): Promise<ClinikoAppointment[]> {
-    let url = `${this.baseUrl}/individual_appointments`;
-    if (params) {
-      url += `?${params.toString()}`;
-    }
-    return this.fetchAllPages<ClinikoAppointment>(url, 'individual_appointments');
+  async getAllAppointments(params?: Record<string, string>): Promise<ClinikoAppointment[]> {
+    return this.fetchAllPages<ClinikoAppointment>('individual_appointments', 'individual_appointments', params);
   }
 }
 
