@@ -9,7 +9,7 @@
     {
       "src": "/api/cliniko",
       "methods": ["POST"],
-      "dest": "api/cliniko.js"
+      "dest": "/api/cliniko.js"
     }
   ]
 }
