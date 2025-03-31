@@ -42,6 +42,94 @@ export const FollowUpProvider: React.FC<{ children: ReactNode }> = ({ children }
     });
   }, [patients, filterDays]);
 
+  // Function to load example data
+  const loadExampleData = async () => {
+    try {
+      // Use our proxy with the example data flag
+      const response = await fetch('/api/cliniko', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          useExampleData: true,
+          endpoint: 'patients'
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to load example data');
+      }
+      
+      const responseData = await response.json();
+      const patients = responseData.data._embedded.patients as ClinikoPatient[];
+      
+      // Process example patient data to add appointment info
+      const processedPatients = await Promise.all(patients.map(async (patient) => {
+        const appointmentResponse = await fetch('/api/cliniko', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            useExampleData: true,
+            endpoint: `patients/${patient.id}/appointments`
+          })
+        });
+        
+        if (!appointmentResponse.ok) {
+          throw new Error(`Failed to load appointments for patient ${patient.id}`);
+        }
+        
+        const appointmentData = await appointmentResponse.json();
+        const appointments = appointmentData.data._embedded.appointments as ClinikoAppointment[];
+        
+        // Sort by date descending
+        appointments.sort(
+          (a, b) => new Date(b.starts_at).getTime() - new Date(a.starts_at).getTime()
+        );
+        
+        const now = new Date();
+        
+        // Check for future appointments
+        const hasFutureAppointment = appointments.some(
+          app => new Date(app.starts_at) > now
+        );
+        
+        // Find most recent past appointment
+        const lastAppointment = appointments.find(
+          app => new Date(app.starts_at) <= now
+        );
+        
+        let lastAppointmentDate: string | null = null;
+        let daysSinceLastAppointment: number | null = null;
+        let assignedPractitionerId: number | undefined;
+        
+        if (lastAppointment) {
+          lastAppointmentDate = lastAppointment.starts_at;
+          const lastDate = new Date(lastAppointment.starts_at);
+          daysSinceLastAppointment = Math.floor((now.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+          assignedPractitionerId = lastAppointment.practitioner?.id;
+        }
+        
+        // Get random follow-up status - mostly pending but some contacted
+        const followUpStatus = Math.random() < 0.8 ? 'pending' : 'contacted';
+        
+        return {
+          ...patient,
+          lastAppointmentDate,
+          daysSinceLastAppointment,
+          followUpStatus: followUpStatus as 'pending' | 'dismissed' | 'contacted',
+          hasFutureAppointment,
+          assignedPractitionerId
+        };
+      }));
+      
+      setPatients(processedPatients);
+    } catch (err) {
+      console.error('Failed to load example data:', err);
+      setError('Failed to load example data. Try again or check your API settings.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Function to process patient appointments and determine follow-up status
   const processPatientData = async (patients: ClinikoPatient[]): Promise<PatientWithFollowUpStatus[]> => {
     const now = new Date();
@@ -112,8 +200,8 @@ export const FollowUpProvider: React.FC<{ children: ReactNode }> = ({ children }
       
       // Check if API key is set
       if (!localStorage.getItem('cliniko_api_key')) {
-        setError('API key not configured. Please go to Settings to set up your Cliniko API.');
-        setIsLoading(false);
+        console.log('No API key found, loading example data instead');
+        await loadExampleData();
         return;
       }
       
