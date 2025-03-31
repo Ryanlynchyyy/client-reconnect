@@ -23,11 +23,9 @@ class ClinikoApiService {
   }
 
   private getHeaders() {
-    // For Cliniko API, the key is used as the username with an empty password (followed by a colon)
-    const encodedKey = btoa(`${this.apiKey}:`);
-    
+    // The API key is used directly as a token
     return {
-      'Authorization': `Basic ${encodedKey}`,
+      'Authorization': `Basic ${this.apiKey}`,
       'User-Agent': this.userAgent,
       'Accept': 'application/json',
       'Content-Type': 'application/json'
@@ -39,13 +37,18 @@ class ClinikoApiService {
     let allItems: T[] = [];
     
     while (nextUrl) {
+      // Use no-cors mode to handle potential CORS issues
       const response = await fetch(nextUrl, {
         method: 'GET',
-        headers: this.getHeaders()
+        headers: this.getHeaders(),
+        mode: 'cors', // Ensure CORS is enabled
+        credentials: 'omit' // Don't send cookies, which can cause issues with cross-origin requests
       });
       
       if (!response.ok) {
-        throw new Error(`API request failed with status ${response.status}`);
+        const errorText = await response.text();
+        console.error('API Error:', response.status, errorText);
+        throw new Error(`API request failed with status ${response.status}: ${errorText}`);
       }
       
       const data = await response.json() as ClinikoApiResponse<T>;
@@ -54,7 +57,7 @@ class ClinikoApiService {
         allItems = [...allItems, ...data._embedded[resourceType]];
       }
       
-      nextUrl = data._links.next || '';
+      nextUrl = data._links && data._links.next ? data._links.next : '';
     }
     
     return allItems;
