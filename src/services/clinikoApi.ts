@@ -7,9 +7,9 @@ class ClinikoApiService {
   private userAgent: string;
   
   constructor() {
-    this.baseUrl = localStorage.getItem('cliniko_base_url') || 'https://api.au1.cliniko.com/v1';
+    this.baseUrl = localStorage.getItem('cliniko_base_url') || 'https://api.au2.cliniko.com/v1';
     this.apiKey = localStorage.getItem('cliniko_api_key') || '';
-    this.userAgent = localStorage.getItem('cliniko_user_agent') || 'ClinikoFollowUp (contact@example.com)';
+    this.userAgent = localStorage.getItem('cliniko_user_agent') || 'ClinikoFollowUp (ryan@ryflow.com.au)';
   }
 
   updateCredentials(baseUrl: string, apiKey: string, userAgent: string) {

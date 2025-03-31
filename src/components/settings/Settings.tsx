@@ -9,9 +9,9 @@ import { clinikoApi } from '@/services/clinikoApi';
 
 const Settings: React.FC = () => {
   const { toast } = useToast();
-  const [baseUrl, setBaseUrl] = useState(localStorage.getItem('cliniko_base_url') || 'https://api.au1.cliniko.com/v1');
+  const [baseUrl, setBaseUrl] = useState(localStorage.getItem('cliniko_base_url') || 'https://api.au2.cliniko.com/v1');
   const [apiKey, setApiKey] = useState(localStorage.getItem('cliniko_api_key') || '');
-  const [userAgent, setUserAgent] = useState(localStorage.getItem('cliniko_user_agent') || 'ClinikoFollowUp (contact@example.com)');
+  const [userAgent, setUserAgent] = useState(localStorage.getItem('cliniko_user_agent') || 'ClinikoFollowUp (ryan@ryflow.com.au)');
   const [isTestingApi, setIsTestingApi] = useState(false);
 
   const handleSaveSettings = () => {
@@ -81,10 +81,10 @@ const Settings: React.FC = () => {
               id="baseUrl"
               value={baseUrl}
               onChange={(e) => setBaseUrl(e.target.value)}
-              placeholder="https://api.au1.cliniko.com/v1"
+              placeholder="https://api.au2.cliniko.com/v1"
             />
             <p className="text-xs text-gray-500">
-              The base URL depends on your region. Check Cliniko API docs for more information.
+              The base URL depends on your region. Make sure to use 'au2' for AU2 region accounts.
             </p>
           </div>
           
@@ -108,7 +108,7 @@ const Settings: React.FC = () => {
               id="userAgent"
               value={userAgent}
               onChange={(e) => setUserAgent(e.target.value)}
-              placeholder="ClinikoFollowUp (your@email.com)"
+              placeholder="ClinikoFollowUp (ryan@ryflow.com.au)"
             />
             <p className="text-xs text-gray-500">
               Cliniko requires a User-Agent header with your app name and email.
