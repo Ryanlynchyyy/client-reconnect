@@ -1,49 +1,34 @@
-
+// api/cliniko.js (Node 18 runtime)
 export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
+  // Set CORS headers if needed (for local dev or other domains):
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+  if (req.method === 'OPTIONS') {
+    // Handle preflight (CORS) 
+    return res.status(200).end();
   }
 
-  const { apiKey, endpoint = "practitioners", params = {} } = req.body;
-
-  if (!apiKey) {
-    return res.status(400).json({ error: "Missing API key" });
-  }
-
-  const auth = Buffer.from(apiKey + ":").toString("base64");
-  let url = `https://api.au2.cliniko.com/v1/${endpoint}`;
+  // Prepare Basic Auth header for Cliniko API
+  const apiKey = process.env.CLINIKO_API_KEY;  // (Store your Cliniko API key in Vercel env)
+  const authHeader = 'Basic ' + Buffer.from(apiKey + ':').toString('base64');
   
-  // Add URL parameters if provided
-  if (Object.keys(params).length > 0) {
-    const searchParams = new URLSearchParams();
-    for (const [key, value] of Object.entries(params)) {
-      searchParams.append(key, value);
-    }
-    url += `?${searchParams.toString()}`;
-  }
-
+  // Forward the request to Cliniko API
   try {
-    console.log(`Proxy request to: ${url}`);
-    
-    const response = await fetch(url, {
+    const clinikoResponse = await fetch('https://api.cliniko.com/v1/your-endpoint', {
+      method: 'POST',
       headers: {
-        "Authorization": `Basic ${auth}`,
-        "User-Agent": req.body.userAgent || "ClinikoFollowUp (ryan@ryflow.com.au)",
-        "Accept": "application/json",
-        "Content-Type": "application/json"
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': authHeader
       },
+      body: req.body
     });
-
-    const data = await response.json();
-    return res.status(response.status).json({
-      status: response.status,
-      data: data
-    });
+    const data = await clinikoResponse.json();
+    res.status(clinikoResponse.status).json(data);
   } catch (err) {
-    console.error("Error hitting Cliniko:", err);
-    return res.status(500).json({ 
-      error: "Failed to fetch from Cliniko", 
-      details: err.message 
-    });
+    console.error('Cliniko proxy error:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 }
