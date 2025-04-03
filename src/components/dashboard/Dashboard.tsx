@@ -84,7 +84,6 @@ const Dashboard: React.FC<DashboardProps> = ({ includeGapDetection = false }) =>
   const [customMessage, setCustomMessage] = useState('');
   const { toast } = useToast();
 
-  // Mock cancelled appointments data for demo
   const [cancelledAppointments, setCancelledAppointments] = useState([
     {
       id: 1,
@@ -164,7 +163,6 @@ const Dashboard: React.FC<DashboardProps> = ({ includeGapDetection = false }) =>
     );
   }, [filteredPatients, searchTerm]);
 
-  // Apply time range filter
   const timeFilteredPatients = useMemo(() => {
     if (timeRange === 'all') return searchResults;
     
@@ -195,29 +193,23 @@ const Dashboard: React.FC<DashboardProps> = ({ includeGapDetection = false }) =>
     });
   }, [searchResults, timeRange]);
 
-  // Apply appointment count filter
   const countFilteredPatients = useMemo(() => {
     if (appointmentCountFilter === 'all') return timeFilteredPatients;
     
-    // In a real implementation, we would check the actual appointment count
-    // For demo purposes, we'll just use a random subset
     if (appointmentCountFilter === '1-2') {
-      return timeFilteredPatients.filter(p => p.id % 3 !== 0); // Simple mock filter
+      return timeFilteredPatients.filter(p => p.id % 3 !== 0);
     }
     
     return timeFilteredPatients;
   }, [timeFilteredPatients, appointmentCountFilter]);
   
-  // Apply appointment status filter
   const statusFilteredPatients = useMemo(() => {
     if (appointmentStatusFilter === 'all') return countFilteredPatients;
     
-    // In a real implementation, we would check the actual appointment status
-    // For demo purposes, we'll filter based on patient ID
     if (appointmentStatusFilter === 'cancelled') {
-      return countFilteredPatients.filter(p => p.id % 2 === 0); // Simple mock filter
+      return countFilteredPatients.filter(p => p.id % 2 === 0);
     } else if (appointmentStatusFilter === 'no-show') {
-      return countFilteredPatients.filter(p => p.id % 3 === 0); // Simple mock filter
+      return countFilteredPatients.filter(p => p.id % 3 === 0);
     }
     
     return countFilteredPatients;
@@ -352,7 +344,6 @@ const Dashboard: React.FC<DashboardProps> = ({ includeGapDetection = false }) =>
     }
   };
 
-  // Get urgency indicator class based on days since last appointment
   const getUrgencyClass = (days?: number | null) => {
     if (!days) return "bg-gray-100 text-gray-700";
     if (days >= 90) return "bg-red-100 text-red-800 border-red-300";
@@ -363,7 +354,6 @@ const Dashboard: React.FC<DashboardProps> = ({ includeGapDetection = false }) =>
 
   return (
     <div className="space-y-6">
-      {/* Dashboard Header with Analytics Summary Cards */}
       <div className="grid gap-6">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
           <div>
@@ -393,7 +383,6 @@ const Dashboard: React.FC<DashboardProps> = ({ includeGapDetection = false }) =>
           </div>
         </div>
         
-        {/* Analytics Summary Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card className="bg-gradient-to-br from-indigo-50 to-white border-indigo-100 hover:border-indigo-300 transition-colors">
             <CardContent className="pt-6">
@@ -540,7 +529,6 @@ const Dashboard: React.FC<DashboardProps> = ({ includeGapDetection = false }) =>
         </Card>
       )}
       
-      {/* Search and Filters Panel */}
       <Card className="shadow-sm">
         <CardHeader className="pb-0">
           <div className="relative w-full">
@@ -606,7 +594,6 @@ const Dashboard: React.FC<DashboardProps> = ({ includeGapDetection = false }) =>
               </Badge>
             )}
             
-            {/* Expanded Filter Panel */}
             {isFilterOpen && (
               <div className="w-full mt-4 bg-gray-50 p-4 rounded-md border border-gray-100 shadow-sm">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -688,7 +675,7 @@ const Dashboard: React.FC<DashboardProps> = ({ includeGapDetection = false }) =>
                     <p className="text-sm font-medium mb-2 text-gray-700">Practitioner</p>
                     <Select 
                       value={selectedPractitionerId?.toString() || "all"}
-                      onValueChange={(value) => setSelectedPractitionerId(value === "all" ? null : parseInt(value))}
+                      onValueChange={(value) => setSelectedPractitionerId(value === "all" ? null : Number(value))}
                     >
                       <SelectTrigger className="w-full text-sm">
                         <SelectValue placeholder="All practitioners" />
@@ -817,6 +804,28 @@ const Dashboard: React.FC<DashboardProps> = ({ includeGapDetection = false }) =>
           </div>
         </CardContent>
       </Card>
+      
+      {reminderDialogOpen && (
+        <Dialog open={reminderDialogOpen} onOpenChange={setReminderDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Remind Later</DialogTitle>
+              <DialogDescription>
+                When would you like to be reminded about this patient?
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex justify-between mt-4">
+              <Button onClick={() => handleConfirmReminder(1)}>Tomorrow</Button>
+              <Button onClick={() => handleConfirmReminder(3)}>3 Days</Button>
+              <Button onClick={() => handleConfirmReminder(7)}>1 Week</Button>
+              <Button onClick={() => handleConfirmReminder(14)}>2 Weeks</Button>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setReminderDialogOpen(false)}>Cancel</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
       
       {/* Patient Follow-Up List */}
       {/* ... keep the rest of the code here ... */}
