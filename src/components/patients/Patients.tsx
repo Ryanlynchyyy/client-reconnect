@@ -54,18 +54,27 @@ const Patients: React.FC = () => {
     // Time filter condition
     let matchesTimeFilter = true;
     if (timeFilter === 'initial-2-weeks') {
-      matchesTimeFilter = patient.isInitialAppointment && patient.daysSinceFirstAppointment && patient.daysSinceFirstAppointment <= 14;
+      // Filter for patients within 2 weeks of their initial appointment
+      matchesTimeFilter = Boolean(patient.isInitialAppointment && 
+        patient.daysSinceFirstAppointment && 
+        patient.daysSinceFirstAppointment <= 14);
     } else if (timeFilter === 'last-30-days') {
-      matchesTimeFilter = patient.daysSinceLastAppointment && patient.daysSinceLastAppointment <= 30;
+      // Filter for patients seen in the last 30 days
+      matchesTimeFilter = Boolean(patient.daysSinceLastAppointment && 
+        patient.daysSinceLastAppointment <= 30);
     } else if (timeFilter === 'last-90-days') {
-      matchesTimeFilter = patient.daysSinceLastAppointment && patient.daysSinceLastAppointment <= 90;
+      // Filter for patients seen in the last 90 days
+      matchesTimeFilter = Boolean(patient.daysSinceLastAppointment && 
+        patient.daysSinceLastAppointment <= 90);
     }
 
     // Cancelled appointment condition
-    const matchesCancelled = !showCancelledOnly || patient.hasRecentCancellation;
+    const matchesCancelled = !showCancelledOnly || 
+      Boolean(patient.hasRecentCancellation);
     
     // Gap days condition
-    const matchesGapDays = !patient.daysSinceLastAppointment || patient.daysSinceLastAppointment >= minGapDays;
+    const matchesGapDays = !patient.daysSinceLastAppointment || 
+      patient.daysSinceLastAppointment >= minGapDays;
     
     // Appointment type filtering
     const matchesAppointmentType = selectedAppointmentTypes.length === 0 || 
