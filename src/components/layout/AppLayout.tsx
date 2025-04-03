@@ -1,68 +1,100 @@
 
-import React, { ReactNode } from 'react';
+import React, { ReactNode, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { LayoutDashboard, Users, Settings, MessageCircle, BarChart } from 'lucide-react';
+import { 
+  LayoutDashboard, 
+  Users, 
+  Settings, 
+  MessageCircle, 
+  BarChart, 
+  ChevronRight
+} from 'lucide-react';
 
 interface AppLayoutProps {
   children: ReactNode;
 }
 
 const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
+  const [collapsed, setCollapsed] = useState(false);
+  
   return (
-    <div className="min-h-screen flex flex-col md:flex-row">
+    <div className="min-h-screen flex flex-col md:flex-row bg-gray-50">
       {/* Sidebar */}
-      <div className="w-full md:w-64 bg-cliniko-primary text-white flex flex-col">
+      <div 
+        className={cn(
+          "bg-white border-r border-gray-200 transition-all duration-300 ease-in-out",
+          collapsed ? "w-[70px]" : "w-full md:w-64"
+        )}
+      >
         {/* Logo/Header */}
-        <div className="p-4 border-b border-cliniko-accent">
-          <h1 className="text-xl font-bold">Cliniko Follow-Up</h1>
-          <p className="text-sm text-white/80">Patient Management System</p>
+        <div className="p-4 border-b border-gray-200 flex justify-between items-center">
+          <div className={cn("overflow-hidden", collapsed && "opacity-0")}>
+            <h1 className="text-xl font-bold text-cliniko-primary">Cliniko Follow-Up</h1>
+            <p className="text-xs text-muted-foreground">Patient Management</p>
+          </div>
+          <button 
+            onClick={() => setCollapsed(!collapsed)}
+            className="p-1 rounded-full hover:bg-gray-100 text-gray-500"
+          >
+            <ChevronRight className={cn(
+              "h-5 w-5 transition-transform",
+              collapsed ? "rotate-180" : ""
+            )} />
+          </button>
         </div>
         
         {/* Navigation */}
-        <nav className="flex flex-col p-2 md:p-4 space-y-1">
+        <nav className="flex flex-col p-2 space-y-1">
           <NavItem 
             to="/" 
             icon={<LayoutDashboard size={20} />} 
             label="Dashboard" 
-            description="Patient follow-up queue" 
+            description="Follow-up queue" 
+            collapsed={collapsed}
           />
           <NavItem 
             to="/patients" 
             icon={<Users size={20} />} 
             label="Patients" 
-            description="All patient records"
+            description="Patient records"
+            collapsed={collapsed}
           />
           <NavItem 
             to="/sms" 
             icon={<MessageCircle size={20} />} 
             label="SMS Templates" 
-            description="Manage message templates"
+            description="Message templates"
+            collapsed={collapsed}
           />
           <NavItem 
             to="/analytics" 
             icon={<BarChart size={20} />} 
             label="Analytics" 
-            description="Follow-up performance data"
+            description="Performance data"
+            collapsed={collapsed}
           />
           <NavItem 
             to="/settings" 
             icon={<Settings size={20} />} 
             label="Settings" 
-            description="System configuration"
+            description="Configuration"
+            collapsed={collapsed}
           />
         </nav>
         
         {/* Footer */}
-        <div className="mt-auto p-4 text-xs text-white/70">
+        <div className={cn(
+          "mt-auto p-4 text-xs text-muted-foreground border-t border-gray-200",
+          collapsed && "hidden"
+        )}>
           <p>© {new Date().getFullYear()} Cliniko Follow-Up</p>
         </div>
       </div>
       
       {/* Main Content */}
       <div className="flex-1 flex flex-col">
-        {/* Main content wrapper */}
-        <div className="flex-1 p-4 md:p-8 bg-gray-50">
+        <div className="flex-1 p-4 md:p-6 max-w-7xl mx-auto w-full">
           {children}
         </div>
       </div>
@@ -75,23 +107,27 @@ interface NavItemProps {
   icon: React.ReactNode;
   label: string;
   description?: string;
+  collapsed?: boolean;
 }
 
-const NavItem: React.FC<NavItemProps> = ({ to, icon, label, description }) => {
+const NavItem: React.FC<NavItemProps> = ({ to, icon, label, description, collapsed = false }) => {
   return (
     <NavLink
       to={to}
       className={({ isActive }) => cn(
         "flex items-center gap-3 px-3 py-2 rounded-md transition-colors",
-        "hover:bg-cliniko-accent/80",
-        isActive ? "bg-cliniko-accent text-white" : "text-white/90"
+        "hover:bg-gray-100",
+        isActive ? "bg-cliniko-muted text-cliniko-primary font-medium" : "text-gray-700",
+        collapsed && "justify-center px-2"
       )}
     >
-      {icon}
-      <div className="flex flex-col">
-        <span>{label}</span>
-        {description && <span className="text-xs text-white/70">{description}</span>}
-      </div>
+      <div className="flex-shrink-0">{icon}</div>
+      {!collapsed && (
+        <div className="flex flex-col overflow-hidden">
+          <span className="truncate">{label}</span>
+          {description && <span className="text-xs text-muted-foreground truncate">{description}</span>}
+        </div>
+      )}
     </NavLink>
   );
 };
