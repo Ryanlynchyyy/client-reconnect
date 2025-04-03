@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,7 +22,6 @@ import PatientFilters from './PatientFilters';
 import PatientCard from './PatientCard';
 import { mockPatients } from '@/data/mockPatients';
 
-// This component would replace the current Patients.tsx eventually
 const PatientFollowUp = () => {
   const { toast } = useToast();
   const [patients, setPatients] = useState(mockPatients);
@@ -32,57 +30,53 @@ const PatientFollowUp = () => {
   const [selectedPatients, setSelectedPatients] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState<string>('all');
   
-  // Filter states
   const [showFilters, setShowFilters] = useState(false);
   const [timeFilter, setTimeFilter] = useState<string>('all');
   const [practitionerFilter, setPractitionerFilter] = useState<number | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
-  // Apply all filters
   useEffect(() => {
     let result = [...patients];
     
-    // Search filter
     if (searchTerm) {
       const lowercaseSearch = searchTerm.toLowerCase();
       result = result.filter(patient => 
         `${patient.first_name} ${patient.last_name}`.toLowerCase().includes(lowercaseSearch) ||
-        patient.phone.includes(lowercaseSearch) ||
-        patient.email.toLowerCase().includes(lowercaseSearch) ||
+        patient.phone?.includes(lowercaseSearch) ||
+        patient.email?.toLowerCase().includes(lowercaseSearch) ||
         (patient.appointmentNotes && patient.appointmentNotes.toLowerCase().includes(lowercaseSearch))
       );
     }
     
-    // Practitioner filter
     if (practitionerFilter) {
       result = result.filter(patient => patient.assignedPractitionerId === practitionerFilter);
     }
     
-    // Time-based filter
     if (timeFilter === 'initial-2-weeks') {
       result = result.filter(patient => 
         patient.isInitialAppointment && 
-        patient.daysSinceFirstAppointment <= 14);
+        !patient.hasFutureAppointment &&
+        patient.daysSinceFirstAppointment >= 14);
     } else if (timeFilter === 'last-30-days') {
       result = result.filter(patient => 
         patient.daysSinceLastAppointment >= 14 && 
         patient.daysSinceLastAppointment <= 30);
     } else if (timeFilter === 'last-90-days') {
       result = result.filter(patient => 
-        patient.daysSinceLastAppointment >= 30 && 
+        patient.daysSinceLastAppointment > 30 && 
         patient.daysSinceLastAppointment <= 90);
     } else if (timeFilter === '90-plus-days') {
       result = result.filter(patient => 
         patient.daysSinceLastAppointment > 90);
     }
     
-    // Status filter
     if (statusFilter === 'cancelled') {
       result = result.filter(patient => patient.hasRecentCancellation);
     } else if (statusFilter === 'no-followup') {
       result = result.filter(patient => 
         patient.isInitialAppointment && 
-        !patient.hasFutureAppointment);
+        !patient.hasFutureAppointment &&
+        patient.daysSinceFirstAppointment >= 14);
     } else if (statusFilter === 'pending') {
       result = result.filter(patient => patient.followUpStatus === 'pending');
     } else if (statusFilter === 'contacted') {
@@ -91,18 +85,18 @@ const PatientFollowUp = () => {
       result = result.filter(patient => patient.followUpStatus === 'dismissed');
     }
     
-    // Apply tab filters
     if (activeTab === 'initial') {
       result = result.filter(patient => 
         patient.isInitialAppointment && 
-        patient.daysSinceFirstAppointment <= 14);
+        !patient.hasFutureAppointment &&
+        patient.daysSinceFirstAppointment >= 14);
     } else if (activeTab === '30-day') {
       result = result.filter(patient => 
         patient.daysSinceLastAppointment >= 14 && 
         patient.daysSinceLastAppointment <= 30);
     } else if (activeTab === '90-day') {
       result = result.filter(patient => 
-        patient.daysSinceLastAppointment >= 30 && 
+        patient.daysSinceLastAppointment > 30 && 
         patient.daysSinceLastAppointment <= 90);
     } else if (activeTab === 'cancelled') {
       result = result.filter(patient => patient.hasRecentCancellation);
@@ -111,15 +105,12 @@ const PatientFollowUp = () => {
     setFilteredPatients(result);
   }, [patients, searchTerm, timeFilter, practitionerFilter, statusFilter, activeTab]);
 
-  // Handler functions
   const handleSendFollowUp = (patientId: string, messageTemplate: string) => {
-    // In a real app, this would send the message
     toast({
       title: "Follow-up message sent",
       description: `Message sent to patient with booking link`,
     });
     
-    // Update patient status
     setPatients(prev => 
       prev.map(patient => 
         patient.id === patientId 
@@ -151,8 +142,6 @@ const PatientFollowUp = () => {
       title: "Reminder set",
       description: `You'll be reminded to follow up in ${days} days`,
     });
-    
-    // In a real app, this would set a reminder
   };
   
   const handleToggleSelectPatient = (patientId: string, selected: boolean) => {
@@ -204,18 +193,16 @@ const PatientFollowUp = () => {
     }
   };
 
-  // Patient counts for tabs
   const counts = {
     all: patients.length,
-    initial: patients.filter(p => p.isInitialAppointment && p.daysSinceFirstAppointment <= 14).length,
+    initial: patients.filter(p => p.isInitialAppointment && !p.hasFutureAppointment && p.daysSinceFirstAppointment >= 14).length,
     '30-day': patients.filter(p => p.daysSinceLastAppointment >= 14 && p.daysSinceLastAppointment <= 30).length,
-    '90-day': patients.filter(p => p.daysSinceLastAppointment >= 30 && p.daysSinceLastAppointment <= 90).length,
+    '90-day': patients.filter(p => p.daysSinceLastAppointment > 30 && p.daysSinceLastAppointment <= 90).length,
     cancelled: patients.filter(p => p.hasRecentCancellation).length
   };
 
   return (
     <div className="space-y-6">
-      {/* Header section */}
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Patient Follow-Up Dashboard</h1>
         <p className="text-gray-600 mt-1">
@@ -223,7 +210,6 @@ const PatientFollowUp = () => {
         </p>
       </div>
       
-      {/* Statistics cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <Card className="bg-white border-beach-sand shadow">
           <CardContent className="flex p-3 items-center justify-between">
@@ -238,7 +224,7 @@ const PatientFollowUp = () => {
         <Card className="bg-blue-50 border-blue-200 shadow-sm">
           <CardContent className="flex p-3 items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-blue-600">Initial (2w)</p>
+              <p className="text-sm font-medium text-blue-600">Initial (2w+)</p>
               <h2 className="text-2xl font-bold text-blue-700">{counts.initial}</h2>
             </div>
             <UserCheck className="h-8 w-8 text-blue-500 opacity-80" />
@@ -248,7 +234,7 @@ const PatientFollowUp = () => {
         <Card className="bg-yellow-50 border-yellow-200 shadow-sm">
           <CardContent className="flex p-3 items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-yellow-600">30 Day Gap</p>
+              <p className="text-sm font-medium text-yellow-600">14-30 Days</p>
               <h2 className="text-2xl font-bold text-yellow-700">{counts['30-day']}</h2>
             </div>
             <Clock className="h-8 w-8 text-yellow-500 opacity-80" />
@@ -258,7 +244,7 @@ const PatientFollowUp = () => {
         <Card className="bg-amber-50 border-amber-200 shadow-sm">
           <CardContent className="flex p-3 items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-amber-600">90 Day Gap</p>
+              <p className="text-sm font-medium text-amber-600">30-90 Days</p>
               <h2 className="text-2xl font-bold text-amber-700">{counts['90-day']}</h2>
             </div>
             <CalendarClock className="h-8 w-8 text-amber-500 opacity-80" />
@@ -276,7 +262,6 @@ const PatientFollowUp = () => {
         </Card>
       </div>
       
-      {/* Search and filters */}
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -313,7 +298,6 @@ const PatientFollowUp = () => {
         </div>
       </div>
       
-      {/* Filters panel - collapsible */}
       {showFilters && (
         <PatientFilters 
           timeFilter={timeFilter}
@@ -325,7 +309,6 @@ const PatientFollowUp = () => {
         />
       )}
       
-      {/* Selected patients actions */}
       {selectedPatients.length > 0 && (
         <Card className="border-beach-ocean bg-beach-foam/50">
           <CardContent className="p-3 flex items-center justify-between">
@@ -354,7 +337,6 @@ const PatientFollowUp = () => {
         </Card>
       )}
       
-      {/* Main tabs and patient cards */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-xl">Patient Follow-ups</CardTitle>
@@ -367,15 +349,15 @@ const PatientFollowUp = () => {
                 <Badge variant="secondary">{counts.all}</Badge>
               </TabsTrigger>
               <TabsTrigger value="initial" className="flex items-center justify-center gap-1">
-                Initial 2w
+                Initial 2w+
                 <Badge variant="secondary">{counts.initial}</Badge>
               </TabsTrigger>
               <TabsTrigger value="30-day" className="flex items-center justify-center gap-1">
-                30d Gap
+                14-30d
                 <Badge variant="secondary">{counts['30-day']}</Badge>
               </TabsTrigger>
               <TabsTrigger value="90-day" className="flex items-center justify-center gap-1">
-                90d Gap
+                30-90d
                 <Badge variant="secondary">{counts['90-day']}</Badge>
               </TabsTrigger>
               <TabsTrigger value="cancelled" className="flex items-center justify-center gap-1">

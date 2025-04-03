@@ -25,12 +25,19 @@ const ReminderDialog: React.FC<ReminderDialogProps> = ({
   patient,
   onRemind
 }) => {
+  // Updated reminder options with more targeted follow-up periods
   const reminderOptions = [
     { days: 7, label: '1 Week' },
     { days: 14, label: '2 Weeks' },
     { days: 30, label: '1 Month' },
+    { days: 60, label: '2 Months' },
     { days: 90, label: '3 Months' }
   ];
+
+  // Add special messaging if this is a new patient who hasn't returned
+  const isNewPatientWithoutFollowUp = patient?.isInitialAppointment && 
+    !patient?.hasFutureAppointment && 
+    patient?.daysSinceFirstAppointment >= 14;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -41,11 +48,23 @@ const ReminderDialog: React.FC<ReminderDialogProps> = ({
             Set Follow-up Reminder
           </DialogTitle>
           <DialogDescription>
-            Schedule a reminder to follow up with {patient.first_name} {patient.last_name}
+            {isNewPatientWithoutFollowUp ? 
+              `Schedule a reminder to follow up with ${patient.first_name} ${patient.last_name} who hasn't booked a second appointment` :
+              `Schedule a reminder to follow up with ${patient.first_name} ${patient.last_name}`
+            }
           </DialogDescription>
         </DialogHeader>
 
         <div className="py-4">
+          {isNewPatientWithoutFollowUp && (
+            <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-md">
+              <p className="text-sm text-amber-700">
+                <strong>New Patient Alert:</strong> It's been {patient.daysSinceFirstAppointment} days since this patient's 
+                first appointment, and they haven't booked a follow-up yet.
+              </p>
+            </div>
+          )}
+          
           <p className="text-sm text-gray-600 mb-4">
             Choose when you'd like to be reminded to follow up with this patient:
           </p>
