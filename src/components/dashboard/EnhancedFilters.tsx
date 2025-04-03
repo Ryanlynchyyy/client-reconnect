@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Calendar, Clock, Filter, Search, User, ScrollText, Check, CalendarX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -11,6 +12,7 @@ import { Slider } from '@/components/ui/slider';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { SetStateAction, Dispatch } from 'react';
+import { TimeFilterType, AppointmentStatusType } from './TimeBasedFilters';
 
 interface PractitionerOption {
   id: number;
@@ -30,8 +32,8 @@ interface FilterProps {
   appointmentTypes: string[];
   selectedAppointmentTypes: string[];
   setSelectedAppointmentTypes: (types: string[]) => void;
-  timeFilter: 'all' | 'initial-2-weeks' | 'last-30-days' | 'last-90-days';
-  setTimeFilter: (filter: 'all' | 'initial-2-weeks' | 'last-30-days' | 'last-90-days') => void;
+  timeFilter: TimeFilterType;
+  setTimeFilter: (filter: TimeFilterType) => void;
   showCancelledOnly: boolean;
   setShowCancelledOnly: (show: boolean) => void;
 }
@@ -86,7 +88,7 @@ const EnhancedFilters: React.FC<FilterProps> = ({
   };
   
   return (
-    <Card className="bg-beach-foam shadow-sm border-beach-sand">
+    <Card className="shadow-sm bg-gradient-to-r from-blue-50 to-cyan-50 border-beach-sand">
       <CardContent className="p-4 space-y-4">
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 justify-between">
           <div className="w-full sm:max-w-md relative">
@@ -112,12 +114,12 @@ const EnhancedFilters: React.FC<FilterProps> = ({
               value={selectedPractitioner?.toString() || ""}
               onValueChange={(value) => setSelectedPractitioner(value ? parseInt(value) : null)}
             >
-              <SelectTrigger className="w-full sm:w-[180px] border-beach-coral/30">
-                <User className="h-4 w-4 mr-2 text-beach-coral" />
+              <SelectTrigger className="w-full sm:w-[180px] border-beach-ocean/30 focus:ring-beach-ocean">
+                <User className="h-4 w-4 mr-2 text-beach-ocean" />
                 <SelectValue placeholder="All Practitioners" />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Practitioners</SelectItem>
+              <SelectContent className="bg-white border-beach-sand">
+                <SelectItem value="">All Practitioners</SelectItem>
                 {practitioners.map(p => (
                   <SelectItem key={p.id} value={p.id.toString()}>{p.name}</SelectItem>
                 ))}
@@ -131,10 +133,10 @@ const EnhancedFilters: React.FC<FilterProps> = ({
                   className="border-beach-ocean/50 text-beach-ocean hover:bg-beach-ocean/10 gap-1.5"
                 >
                   <Filter className="h-4 w-4" />
-                  <span>Filters</span>
+                  <span>Advanced Filters</span>
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-96 p-4" align="end">
+              <PopoverContent className="w-96 p-4 bg-white border-beach-sand shadow-lg" align="end">
                 <div className="space-y-5">
                   {/* Time period filters */}
                   <div className="space-y-2">
@@ -144,7 +146,7 @@ const EnhancedFilters: React.FC<FilterProps> = ({
                     </Label>
                     <Tabs 
                       value={timeFilter} 
-                      onValueChange={(value) => setTimeFilter(value as any)}
+                      onValueChange={(value) => setTimeFilter(value as TimeFilterType)}
                       className="w-full"
                     >
                       <TabsList className="grid grid-cols-4 w-full">
@@ -159,7 +161,7 @@ const EnhancedFilters: React.FC<FilterProps> = ({
                   {/* Cancelled appointments filter */}
                   <div className="space-y-2">
                     <Label className="text-sm font-semibold flex items-center gap-1.5">
-                      <CalendarX className="h-4 w-4 text-beach-ocean" />
+                      <CalendarX className="h-4 w-4 text-red-500" />
                       Appointment Status
                     </Label>
                     <div className="flex items-center space-x-2">
@@ -167,6 +169,7 @@ const EnhancedFilters: React.FC<FilterProps> = ({
                         id="cancelled-only"
                         checked={showCancelledOnly}
                         onCheckedChange={(checked) => setShowCancelledOnly(!!checked)}
+                        className="text-beach-ocean"
                       />
                       <Label htmlFor="cancelled-only" className="text-sm">
                         Show cancelled appointments only
@@ -214,6 +217,7 @@ const EnhancedFilters: React.FC<FilterProps> = ({
                             onCheckedChange={(checked) => 
                               handleStatusFilterChange(status, !!checked)
                             }
+                            className="text-beach-ocean"
                           />
                           <Label htmlFor={`status-${status}`} className="text-sm capitalize">
                             {status === 'no-followup' ? 'No Follow-up' : 
@@ -238,6 +242,7 @@ const EnhancedFilters: React.FC<FilterProps> = ({
                             onCheckedChange={(checked) => 
                               handleAppointmentTypeChange(type, !!checked)
                             }
+                            className="text-beach-ocean"
                           />
                           <Label htmlFor={`type-${type}`} className="text-sm">
                             {type}
@@ -250,7 +255,7 @@ const EnhancedFilters: React.FC<FilterProps> = ({
                   <Button 
                     variant="outline" 
                     size="sm" 
-                    className="w-full mt-2"
+                    className="w-full mt-2 border-beach-coral/30 text-beach-coral hover:bg-beach-coral/10"
                     onClick={() => {
                       clearFilters();
                       setFiltersOpen(false);
@@ -266,10 +271,10 @@ const EnhancedFilters: React.FC<FilterProps> = ({
         </div>
 
         {/* Active Filters Display */}
-        {(timeFilter !== 'all' || showCancelledOnly) && (
+        {(timeFilter !== 'all' || showCancelledOnly || selectedAppointmentTypes.length > 0) && (
           <div className="flex flex-wrap gap-2 mt-2">
             {timeFilter !== 'all' && (
-              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 py-1">
                 {timeFilter === 'initial-2-weeks' ? '2 weeks since initial' : 
                  timeFilter === 'last-30-days' ? '30 days since last' : 
                  '90 days since last'}
@@ -277,10 +282,16 @@ const EnhancedFilters: React.FC<FilterProps> = ({
             )}
             
             {showCancelledOnly && (
-              <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+              <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 py-1">
                 Cancelled appointments
               </Badge>
             )}
+            
+            {selectedAppointmentTypes.map(type => (
+              <Badge key={type} variant="outline" className="bg-green-50 text-green-700 border-green-200 py-1">
+                {type}
+              </Badge>
+            ))}
           </div>
         )}
       </CardContent>

@@ -6,8 +6,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
-import { MessageSquare, Check } from 'lucide-react';
-import EnhancedFilters from '@/components/dashboard/EnhancedFilters';
+import { MessageSquare, Check, CalendarX, Calendar, Clock } from 'lucide-react';
+import { TimeBasedFilters, TimeFilterType, AppointmentStatusType } from '@/components/dashboard/TimeBasedFilters';
+import { Input } from '@/components/ui/input';
 
 const Patients: React.FC = () => {
   const { 
@@ -22,27 +23,9 @@ const Patients: React.FC = () => {
   } = useFollowUp();
   
   const [searchTerm, setSearchTerm] = useState('');
-  const [minGapDays, setMinGapDays] = useState(14);
-  const [statusFilters, setStatusFilters] = useState<Record<string, boolean>>({
-    cancelled: true,
-    'no-followup': true,
-    'large-gap': true
-  });
-  const [appointmentTypes] = useState(['Initial Consultation', 'Follow-up', 'Treatment', 'Assessment']);
-  const [selectedAppointmentTypes, setSelectedAppointmentTypes] = useState<string[]>([]);
-  const [timeFilter, setTimeFilter] = useState<'all' | 'initial-2-weeks' | 'last-30-days' | 'last-90-days'>('all');
-  const [showCancelledOnly, setShowCancelledOnly] = useState(false);
-  
-  const getPractitionerColor = (practitionerId?: number) => {
-    if (!practitionerId) return "bg-gray-100 text-gray-800";
-    switch (practitionerId) {
-      case 1: return "bg-blue-100 text-blue-800";
-      case 2: return "bg-green-100 text-green-800";
-      case 3: return "bg-purple-100 text-purple-800";
-      case 4: return "bg-amber-100 text-amber-800";
-      default: return "bg-gray-100 text-gray-800";
-    }
-  };
+  const [timeFilter, setTimeFilter] = useState<TimeFilterType>('all');
+  const [appointmentStatusFilter, setAppointmentStatusFilter] = useState<AppointmentStatusType>('all');
+  const [showFiltersExpanded, setShowFiltersExpanded] = useState(false);
   
   const filteredPatients = patients.filter(patient => {
     const matchesSearch = !searchTerm || 
@@ -68,20 +51,15 @@ const Patients: React.FC = () => {
         patient.daysSinceLastAppointment <= 90);
     }
 
-    // Cancelled appointment condition
-    const matchesCancelled = !showCancelledOnly || 
-      Boolean(patient.hasRecentCancellation);
+    // Appointment status condition
+    let matchesStatus = true;
+    if (appointmentStatusFilter === 'cancelled') {
+      matchesStatus = Boolean(patient.hasRecentCancellation);
+    } else if (appointmentStatusFilter === 'active') {
+      matchesStatus = !patient.hasRecentCancellation;
+    }
     
-    // Gap days condition
-    const matchesGapDays = !patient.daysSinceLastAppointment || 
-      patient.daysSinceLastAppointment >= minGapDays;
-    
-    // Appointment type filtering
-    const matchesAppointmentType = selectedAppointmentTypes.length === 0 || 
-      (patient.lastAppointmentType && selectedAppointmentTypes.includes(patient.lastAppointmentType));
-    
-    return matchesSearch && matchesPractitioner && matchesTimeFilter && 
-           matchesCancelled && matchesGapDays && matchesAppointmentType;
+    return matchesSearch && matchesPractitioner && matchesTimeFilter && matchesStatus;
   });
   
   return (
@@ -93,23 +71,29 @@ const Patients: React.FC = () => {
         </p>
       </div>
       
-      <EnhancedFilters 
-        searchTerm={searchTerm}
-        setSearchTerm={setSearchTerm}
-        practitioners={practitioners.map(p => ({ id: p.id, name: `${p.first_name} ${p.last_name}` }))}
-        selectedPractitioner={selectedPractitionerId}
-        setSelectedPractitioner={setSelectedPractitionerId}
-        minGapDays={minGapDays}
-        setMinGapDays={setMinGapDays}
-        statusFilters={statusFilters}
-        setStatusFilters={setStatusFilters}
-        appointmentTypes={appointmentTypes}
-        selectedAppointmentTypes={selectedAppointmentTypes}
-        setSelectedAppointmentTypes={setSelectedAppointmentTypes}
-        timeFilter={timeFilter}
-        setTimeFilter={setTimeFilter}
-        showCancelledOnly={showCancelledOnly}
-        setShowCancelledOnly={setShowCancelledOnly}
+      <div className="flex flex-wrap gap-3">
+        <div className="relative w-full max-w-sm">
+          <Input
+            placeholder="Search patients..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10 pr-4 py-2 w-full"
+          />
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+            </svg>
+          </div>
+        </div>
+      </div>
+      
+      <TimeBasedFilters
+        selectedTimeFilter={timeFilter}
+        onTimeFilterChange={setTimeFilter}
+        appointmentStatusFilter={appointmentStatusFilter}
+        onAppointmentStatusChange={setAppointmentStatusFilter}
+        showFiltersExpanded={showFiltersExpanded}
+        setShowFiltersExpanded={setShowFiltersExpanded}
       />
       
       {error && (
@@ -120,10 +104,20 @@ const Patients: React.FC = () => {
         </Card>
       )}
       
-      <Card>
-        <CardContent className="pt-6">
+      <Card className="overflow-hidden border-beach-sand shadow-md">
+        <CardHeader className="bg-beach-foam border-b border-beach-sand px-6 py-4">
+          <CardTitle className="flex items-center justify-between">
+            <span className="text-xl font-semibold text-beach-ocean">Patient List</span>
+            <div className="flex space-x-2">
+              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                {filteredPatients.length} Patients
+              </Badge>
+            </div>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
           <Table>
-            <TableHeader>
+            <TableHeader className="bg-gray-50">
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>Last Appointment</TableHead>
@@ -137,40 +131,73 @@ const Patients: React.FC = () => {
               {isLoading ? (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-8">
-                    Loading patient data...
+                    <div className="flex flex-col items-center justify-center space-y-2">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cliniko-primary"></div>
+                      <span className="text-sm text-muted-foreground">Loading patient data...</span>
+                    </div>
                   </TableCell>
                 </TableRow>
               ) : filteredPatients.length > 0 ? (
                 filteredPatients.map(patient => (
-                  <TableRow key={patient.id}>
+                  <TableRow key={patient.id} className="hover:bg-beach-foam/50 transition-colors">
                     <TableCell className="font-medium">
-                      {patient.first_name} {patient.last_name}
+                      <div className="flex flex-col">
+                        <span>{patient.first_name} {patient.last_name}</span>
+                        {patient.isInitialAppointment && (
+                          <Badge variant="outline" className="mt-1 max-w-max text-xs bg-green-50 text-green-700 border-green-200">
+                            Initial
+                          </Badge>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>
-                      {patient.lastAppointmentDate 
-                        ? format(new Date(patient.lastAppointmentDate), 'PPP')
-                        : 'No appointments'}
+                      <div className="flex items-center space-x-2">
+                        {patient.hasRecentCancellation ? (
+                          <CalendarX className="h-4 w-4 text-red-500" />
+                        ) : (
+                          <Calendar className="h-4 w-4 text-gray-500" />
+                        )}
+                        <span>{patient.lastAppointmentDate 
+                          ? format(new Date(patient.lastAppointmentDate), 'PPP')
+                          : 'No appointments'}</span>
+                      </div>
                     </TableCell>
                     <TableCell>
-                      {patient.daysSinceLastAppointment || 'N/A'}
+                      <div className="flex items-center space-x-2">
+                        <Clock className="h-4 w-4 text-gray-500" />
+                        <span>{patient.daysSinceLastAppointment || 'N/A'}</span>
+                      </div>
                     </TableCell>
                     <TableCell>
                       {patient.practitionerName ? (
-                        <Badge className={getPractitionerColor(patient.assignedPractitionerId)}>
+                        <Badge className={`${
+                          patient.assignedPractitionerId === 1 ? "bg-blue-100 text-blue-800 border-blue-200" :
+                          patient.assignedPractitionerId === 2 ? "bg-green-100 text-green-800 border-green-200" :
+                          patient.assignedPractitionerId === 3 ? "bg-purple-100 text-purple-800 border-purple-200" :
+                          patient.assignedPractitionerId === 4 ? "bg-amber-100 text-amber-800 border-amber-200" :
+                          "bg-gray-100 text-gray-800 border-gray-200"
+                        } px-2 py-1 rounded-full text-xs font-medium`}>
                           {patient.practitionerName}
                         </Badge>
                       ) : (
-                        'N/A'
+                        <span className="text-gray-400 text-sm">N/A</span>
                       )}
                     </TableCell>
                     <TableCell>
                       {patient.hasFutureAppointment ? (
-                        <Badge className="bg-green-500">Future Appointment</Badge>
+                        <Badge className="bg-green-100 text-green-800 border-green-200">Future Appointment</Badge>
+                      ) : patient.hasRecentCancellation ? (
+                        <Badge className="bg-red-100 text-red-800 border-red-200">Cancelled</Badge>
                       ) : (
                         <Badge 
                           variant={
                             patient.followUpStatus === 'pending' ? 'default' :
                             patient.followUpStatus === 'contacted' ? 'outline' : 'secondary'
+                          }
+                          className={
+                            patient.followUpStatus === 'pending' ? 'bg-beach-ocean text-white' :
+                            patient.followUpStatus === 'contacted' ? 'text-beach-ocean border-beach-ocean bg-beach-foam' :
+                            'bg-gray-100 text-gray-700'
                           }
                         >
                           {patient.followUpStatus === 'pending' && 'Needs Follow-Up'}
@@ -186,13 +213,14 @@ const Patients: React.FC = () => {
                           size="sm"
                           onClick={() => dismissPatient(patient.id)}
                           title="Dismiss patient"
+                          className="border-gray-200 hover:bg-gray-100 hover:text-gray-900"
                         >
                           <Check size={16} />
                         </Button>
                         <Button 
                           variant="outline" 
                           size="sm" 
-                          className="bg-cliniko-primary text-white"
+                          className="bg-cliniko-primary text-white hover:bg-cliniko-accent"
                           onClick={() => markAsContacted(patient.id)}
                           title="Mark as contacted"
                         >
@@ -205,7 +233,16 @@ const Patients: React.FC = () => {
               ) : (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-8">
-                    No patients found
+                    <div className="flex flex-col items-center justify-center space-y-2 text-muted-foreground">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-12 w-12 text-gray-300 mb-2">
+                        <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
+                        <line x1="16" x2="16" y1="2" y2="6" />
+                        <line x1="8" x2="8" y1="2" y2="6" />
+                        <line x1="3" x2="21" y1="10" y2="10" />
+                      </svg>
+                      <span className="text-lg font-medium">No patients found</span>
+                      <p className="text-sm max-w-md">Try adjusting your filters or search term to find what you're looking for.</p>
+                    </div>
                   </TableCell>
                 </TableRow>
               )}
