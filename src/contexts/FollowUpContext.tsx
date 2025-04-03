@@ -1,6 +1,6 @@
 
 import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
-import { PatientWithFollowUpStatus, ClinikoAppointment, ClinikoPatient } from '@/types/clinikoTypes';
+import { PatientWithFollowUpStatus, ClinikoAppointment, ClinikoPatient, ClinikioPractitioner } from '@/types/clinikoTypes';
 import { clinikoApi } from '@/services/clinikoApi';
 import { useToast } from '@/hooks/use-toast';
 import { getMockData } from '@/data/mockData';
@@ -16,6 +16,9 @@ interface FollowUpContextType {
   setFilterDays: (days: number) => void;
   filteredPatients: PatientWithFollowUpStatus[];
   remindLater: (patientId: number, days: number) => void;
+  practitioners: ClinikioPractitioner[];
+  selectedPractitionerId: number | null;
+  setSelectedPractitionerId: (id: number | null) => void;
 }
 
 const FollowUpContext = createContext<FollowUpContextType | undefined>(undefined);
@@ -25,10 +28,17 @@ export const FollowUpProvider: React.FC<{ children: ReactNode }> = ({ children }
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [filterDays, setFilterDays] = useState<number>(30);
+  const [practitioners, setPractitioners] = useState<ClinikioPractitioner[]>([]);
+  const [selectedPractitionerId, setSelectedPractitionerId] = useState<number | null>(null);
   const { toast } = useToast();
 
   const filteredPatients = React.useMemo(() => {
     return patients.filter(patient => {
+      // Filter by practitioner if one is selected
+      if (selectedPractitionerId !== null && patient.assignedPractitionerId !== selectedPractitionerId) {
+        return false;
+      }
+      
       if (patient.hasFutureAppointment) return false;
       
       // Check if patient has a pending reminder
@@ -39,7 +49,7 @@ export const FollowUpProvider: React.FC<{ children: ReactNode }> = ({ children }
       return patient.daysSinceLastAppointment !== null && 
              patient.daysSinceLastAppointment >= filterDays;
     });
-  }, [patients, filterDays]);
+  }, [patients, filterDays, selectedPractitionerId]);
 
   // Mock treatment notes for demonstration purposes
   const mockTreatmentNotes = [
@@ -52,6 +62,12 @@ export const FollowUpProvider: React.FC<{ children: ReactNode }> = ({ children }
     "Posture assessment and correction"
   ];
 
+  // Mock practitioners for demonstration purposes
+  const mockPractitioners = [
+    { id: 1, first_name: "Ben", last_name: "Smith", nickname: null, email: "ben@clinic.com", phone_number: null, image_url: null, created_at: "", updated_at: "", links: { self: "" } },
+    { id: 2, first_name: "Josh", last_name: "Adams", nickname: null, email: "josh@clinic.com", phone_number: null, image_url: null, created_at: "", updated_at: "", links: { self: "" } }
+  ];
+
   const loadExampleData = async () => {
     try {
       console.log('Loading example data directly from mock data');
@@ -59,7 +75,7 @@ export const FollowUpProvider: React.FC<{ children: ReactNode }> = ({ children }
       const patientResponse = getMockData('patients');
       const patients = patientResponse._embedded.patients as ClinikoPatient[];
       
-      const processedPatients = await Promise.all(patients.map(async (patient) => {
+      const processedPatients = await Promise.all(patients.map(async (patient, index) => {
         const appointmentData = getMockData(`patients/${patient.id}/appointments`);
         const appointments = appointmentData._embedded.appointments as ClinikoAppointment[];
         
@@ -80,12 +96,19 @@ export const FollowUpProvider: React.FC<{ children: ReactNode }> = ({ children }
         let lastAppointmentDate: string | null = null;
         let daysSinceLastAppointment: number | null = null;
         let assignedPractitionerId: number | undefined;
+        let practitionerName: string | null = null;
         
         if (lastAppointment) {
           lastAppointmentDate = lastAppointment.starts_at;
           const lastDate = new Date(lastAppointment.starts_at);
           daysSinceLastAppointment = Math.floor((now.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
-          assignedPractitionerId = lastAppointment.practitioner?.id;
+          
+          // Assign a practitioner ID (alternating between 1 and 2 for mock data)
+          assignedPractitionerId = index % 2 === 0 ? 1 : 2;
+          const practitioner = mockPractitioners.find(p => p.id === assignedPractitionerId);
+          if (practitioner) {
+            practitionerName = `${practitioner.first_name} ${practitioner.last_name}`;
+          }
         }
         
         const followUpStatus = Math.random() < 0.8 ? 'pending' : 'contacted';
@@ -100,12 +123,14 @@ export const FollowUpProvider: React.FC<{ children: ReactNode }> = ({ children }
           followUpStatus: followUpStatus as 'pending' | 'dismissed' | 'contacted',
           hasFutureAppointment,
           assignedPractitionerId,
+          practitionerName,
           treatmentNotes,
           reminderDate: null
         };
       }));
       
       setPatients(processedPatients);
+      setPractitioners(mockPractitioners);
       setError(null);
     } catch (err) {
       console.error('Failed to load example data:', err);
@@ -121,6 +146,7 @@ export const FollowUpProvider: React.FC<{ children: ReactNode }> = ({ children }
     const reminderDates = JSON.parse(localStorage.getItem('reminder_dates') || '{}');
     
     const processedPatients: PatientWithFollowUpStatus[] = [];
+    const practitioners = await clinikoApi.getPractitioners();
     
     for (const patient of patients) {
       try {
@@ -145,6 +171,7 @@ export const FollowUpProvider: React.FC<{ children: ReactNode }> = ({ children }
         let lastAppointmentDate: string | null = null;
         let daysSinceLastAppointment: number | null = null;
         let assignedPractitionerId: number | undefined;
+        let practitionerName: string | null = null;
         let treatmentNotes: string | null = null;
         
         if (lastAppointment) {
@@ -152,6 +179,12 @@ export const FollowUpProvider: React.FC<{ children: ReactNode }> = ({ children }
           const lastDate = new Date(lastAppointment.starts_at);
           daysSinceLastAppointment = Math.floor((now.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
           assignedPractitionerId = lastAppointment.practitioner.id;
+          
+          // Find practitioner name
+          const practitioner = practitioners.find(p => p.id === assignedPractitionerId);
+          if (practitioner) {
+            practitionerName = `${practitioner.first_name} ${practitioner.last_name}`;
+          }
           
           // Extract treatment notes from appointment notes
           treatmentNotes = lastAppointment.notes || null;
@@ -167,6 +200,7 @@ export const FollowUpProvider: React.FC<{ children: ReactNode }> = ({ children }
           followUpStatus: savedStatus,
           hasFutureAppointment,
           assignedPractitionerId,
+          practitionerName,
           treatmentNotes,
           reminderDate
         });
@@ -190,10 +224,12 @@ export const FollowUpProvider: React.FC<{ children: ReactNode }> = ({ children }
       }
       
       const patients = await clinikoApi.getPatients();
+      const practitioners = await clinikoApi.getPractitioners();
       
       const processedPatients = await processPatientData(patients);
       
       setPatients(processedPatients);
+      setPractitioners(practitioners);
     } catch (err) {
       console.error('Failed to load data:', err);
       setError('Failed to load patient data. Check your API settings and try again.');
@@ -269,7 +305,10 @@ export const FollowUpProvider: React.FC<{ children: ReactNode }> = ({ children }
         filterDays,
         setFilterDays,
         filteredPatients,
-        remindLater
+        remindLater,
+        practitioners,
+        selectedPractitionerId,
+        setSelectedPractitionerId
       }}
     >
       {children}

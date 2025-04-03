@@ -1,3 +1,4 @@
+
 export interface ClinikoApiResponse<T> {
   total_entries: number;
   total_pages: number;
@@ -92,4 +93,5 @@ export interface PatientWithFollowUpStatus extends ClinikoPatient {
   // Added fields
   treatmentNotes?: string | null;
   reminderDate?: string | null;
+  practitionerName?: string | null; // Added for practitioner name display
 }

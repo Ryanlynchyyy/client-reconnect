@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { useFollowUp } from '@/contexts/FollowUpContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -47,7 +46,10 @@ const Dashboard: React.FC = () => {
     markAsContacted,
     filterDays,
     setFilterDays,
-    remindLater
+    remindLater,
+    practitioners,
+    selectedPractitionerId,
+    setSelectedPractitionerId
   } = useFollowUp();
   
   const [searchTerm, setSearchTerm] = useState('');
@@ -56,7 +58,6 @@ const Dashboard: React.FC = () => {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [selectedTab, setSelectedTab] = useState('pending');
   
-  // Dialogs state
   const [dismissDialogOpen, setDismissDialogOpen] = useState(false);
   const [smsModalOpen, setSmsModalOpen] = useState(false);
   const [reminderDialogOpen, setReminderDialogOpen] = useState(false);
@@ -66,7 +67,6 @@ const Dashboard: React.FC = () => {
   const [customMessage, setCustomMessage] = useState('');
   const { toast } = useToast();
 
-  // Filter patients by search term
   const searchResults = useMemo(() => {
     if (!searchTerm) return filteredPatients;
     
@@ -78,23 +78,28 @@ const Dashboard: React.FC = () => {
     );
   }, [filteredPatients, searchTerm]);
 
-  // Sort patients
   const sortedPatients = useMemo(() => {
     return [...searchResults].sort((a, b) => {
+      if (selectedPractitionerId) {
+        const aHasPractitioner = a.assignedPractitionerId === selectedPractitionerId;
+        const bHasPractitioner = b.assignedPractitionerId === selectedPractitionerId;
+        
+        if (aHasPractitioner && !bHasPractitioner) return -1;
+        if (!aHasPractitioner && bHasPractitioner) return 1;
+      }
+      
       if (sortBy === 'name') {
         const nameA = `${a.first_name} ${a.last_name}`.toLowerCase();
         const nameB = `${b.first_name} ${b.last_name}`.toLowerCase();
         return sortOrder === 'asc' ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
       } else {
-        // Sort by days since last appointment
         const dateA = a.daysSinceLastAppointment || 0;
         const dateB = b.daysSinceLastAppointment || 0;
         return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
       }
     });
-  }, [searchResults, sortBy, sortOrder]);
+  }, [searchResults, sortBy, sortOrder, selectedPractitionerId]);
 
-  // Group patients by status
   const groupedPatients = useMemo(() => {
     return {
       all: sortedPatients,
@@ -104,7 +109,6 @@ const Dashboard: React.FC = () => {
     };
   }, [sortedPatients]);
 
-  // Group patients by days range
   const rangePatients = useMemo(() => {
     const ranges = {
       '30-60': sortedPatients.filter(p => 
@@ -151,7 +155,6 @@ const Dashboard: React.FC = () => {
 
   const handleSendSMS = (patient: PatientWithFollowUpStatus) => {
     setCurrentPatient(patient);
-    // Pre-populate custom message based on treatment notes
     const treatmentText = patient.treatmentNotes || 'your treatment';
     setCustomMessage(`Hi ${patient.first_name}, we hope you've been well since ${treatmentText}. Would you like to schedule a follow-up appointment?`);
     setSmsModalOpen(true);
@@ -186,9 +189,19 @@ const Dashboard: React.FC = () => {
     });
   };
 
+  const getPractitionerColor = (practitionerId?: number) => {
+    if (!practitionerId) return "bg-gray-100 text-gray-800";
+    switch (practitionerId) {
+      case 1: return "bg-blue-100 text-blue-800 border-blue-300";
+      case 2: return "bg-green-100 text-green-800 border-green-300";
+      case 3: return "bg-purple-100 text-purple-800 border-purple-300";
+      case 4: return "bg-amber-100 text-amber-800 border-amber-300";
+      default: return "bg-gray-100 text-gray-800 border-gray-300";
+    }
+  };
+
   return (
     <div className="space-y-4">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
           <h2 className="text-2xl font-bold">Patient Follow-Ups</h2>
@@ -217,7 +230,6 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
       
-      {/* Error Alert */}
       {error && (
         <Card className="border-red-200 bg-red-50">
           <CardContent className="pt-6 text-red-800">
@@ -226,9 +238,7 @@ const Dashboard: React.FC = () => {
         </Card>
       )}
       
-      {/* Search & Status Summary */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Search */}
         <Card className="lg:col-span-2">
           <CardHeader className="pb-2">
             <div className="relative w-full">
@@ -265,6 +275,16 @@ const Dashboard: React.FC = () => {
               <Badge variant="outline" className="flex items-center gap-1">
                 Days: {filterDays}+
               </Badge>
+              
+              {selectedPractitionerId && (
+                <Badge 
+                  variant="outline" 
+                  className={cn("cursor-pointer", getPractitionerColor(selectedPractitionerId))}
+                  onClick={() => setSelectedPractitionerId(null)}
+                >
+                  {practitioners.find(p => p.id === selectedPractitionerId)?.first_name || 'Practitioner'} ×
+                </Badge>
+              )}
               
               {isFilterOpen && (
                 <div className="w-full mt-2 bg-gray-50 p-3 rounded-md grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -322,25 +342,23 @@ const Dashboard: React.FC = () => {
                   </div>
                   
                   <div>
-                    <p className="text-sm font-medium mb-2">Order</p>
-                    <div className="flex space-x-1">
-                      <Button 
-                        variant={sortOrder === 'asc' ? "default" : "outline"}
-                        onClick={() => setSortOrder('asc')}
-                        size="sm"
-                        className="flex-1"
-                      >
-                        A-Z
-                      </Button>
-                      <Button 
-                        variant={sortOrder === 'desc' ? "default" : "outline"}
-                        onClick={() => setSortOrder('desc')}
-                        size="sm"
-                        className="flex-1"
-                      >
-                        Z-A
-                      </Button>
-                    </div>
+                    <p className="text-sm font-medium mb-2">Practitioner</p>
+                    <Select 
+                      value={selectedPractitionerId?.toString() || ""}
+                      onValueChange={(value) => setSelectedPractitionerId(value ? parseInt(value) : null)}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="All practitioners" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">All Practitioners</SelectItem>
+                        {practitioners.map(practitioner => (
+                          <SelectItem key={practitioner.id} value={practitioner.id.toString()}>
+                            {practitioner.first_name} {practitioner.last_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               )}
@@ -348,7 +366,6 @@ const Dashboard: React.FC = () => {
           </CardContent>
         </Card>
         
-        {/* Status Summary */}
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base">Patient Summary</CardTitle>
@@ -371,7 +388,6 @@ const Dashboard: React.FC = () => {
         </Card>
       </div>
       
-      {/* Patient Lists */}
       {isLoading ? (
         <LoadingSkeleton />
       ) : (
@@ -411,6 +427,7 @@ const Dashboard: React.FC = () => {
                       onDismiss={handleDismissRequest}
                       onSendSMS={handleSendSMS}
                       onRemindLater={handleRemindLater}
+                      getPractitionerColor={getPractitionerColor}
                     />
                   ) : null}
                   
@@ -421,6 +438,7 @@ const Dashboard: React.FC = () => {
                     onDismiss={handleDismissRequest}
                     onSendSMS={handleSendSMS}
                     onRemindLater={handleRemindLater}
+                    getPractitionerColor={getPractitionerColor}
                   />
                 </div>
               )}
@@ -429,7 +447,6 @@ const Dashboard: React.FC = () => {
         </Tabs>
       )}
       
-      {/* Dismiss Confirmation Dialog */}
       <Dialog open={dismissDialogOpen} onOpenChange={setDismissDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -472,7 +489,6 @@ const Dashboard: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* SMS Template Selection Dialog */}
       <Dialog open={smsModalOpen} onOpenChange={setSmsModalOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -492,7 +508,6 @@ const Dashboard: React.FC = () => {
                 onValueChange={(val) => {
                   setSelectedTemplate(val);
                   
-                  // Update custom message based on template and patient info
                   if (currentPatient) {
                     const treatmentText = currentPatient.treatmentNotes || 'your treatment';
                     
@@ -559,7 +574,6 @@ const Dashboard: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Remind Later Dialog */}
       <Dialog open={reminderDialogOpen} onOpenChange={setReminderDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -610,7 +624,6 @@ const Dashboard: React.FC = () => {
   );
 };
 
-// Helper Components
 const StatusBadge: React.FC<{count: number, label: string, color: string}> = ({count, label, color}) => (
   <div className={`p-2 rounded-md ${color}`}>
     <div className="text-lg font-semibold">{count}</div>
@@ -654,6 +667,7 @@ interface PatientGroupProps {
   onDismiss: (patient: PatientWithFollowUpStatus) => void;
   onSendSMS: (patient: PatientWithFollowUpStatus) => void;
   onRemindLater: (patient: PatientWithFollowUpStatus) => void;
+  getPractitionerColor: (practitionerId?: number) => string;
 }
 
 const PatientGroup: React.FC<PatientGroupProps> = ({ 
@@ -662,9 +676,9 @@ const PatientGroup: React.FC<PatientGroupProps> = ({
   patients, 
   onDismiss,
   onSendSMS,
-  onRemindLater
+  onRemindLater,
+  getPractitionerColor
 }) => {
-  // Only show up to 10 patients and indicate there are more
   const displayPatients = patients.slice(0, 10);
   const hasMore = patients.length > 10;
   
@@ -686,6 +700,7 @@ const PatientGroup: React.FC<PatientGroupProps> = ({
                 onDismiss={onDismiss}
                 onSendSMS={onSendSMS}
                 onRemindLater={onRemindLater}
+                getPractitionerColor={getPractitionerColor}
               />
             ))}
           </div>
@@ -707,9 +722,16 @@ interface PatientCardProps {
   onDismiss: (patient: PatientWithFollowUpStatus) => void;
   onSendSMS: (patient: PatientWithFollowUpStatus) => void;
   onRemindLater: (patient: PatientWithFollowUpStatus) => void;
+  getPractitionerColor: (practitionerId?: number) => string;
 }
 
-const PatientCard: React.FC<PatientCardProps> = ({ patient, onDismiss, onSendSMS, onRemindLater }) => {
+const PatientCard: React.FC<PatientCardProps> = ({ 
+  patient, 
+  onDismiss, 
+  onSendSMS, 
+  onRemindLater,
+  getPractitionerColor 
+}) => {
   const lastAppointmentDate = patient.lastAppointmentDate 
     ? format(new Date(patient.lastAppointmentDate), 'MMM d, yyyy')
     : 'Unknown';
@@ -724,15 +746,25 @@ const PatientCard: React.FC<PatientCardProps> = ({ patient, onDismiss, onSendSMS
     'contacted': 'border-amber-400',
     'dismissed': 'border-gray-400'
   }[patient.followUpStatus];
+  
+  const practitionerStyle = patient.assignedPractitionerId ? 
+    `border-l-4 ${getPractitionerColor(patient.assignedPractitionerId)}` : 'border-l-4 border-gray-300';
 
   return (
-    <div className={`bg-white rounded-lg border-l-4 ${statusColor} shadow-sm hover:shadow-md transition-shadow overflow-hidden`}>
+    <div className={`bg-white rounded-lg ${practitionerStyle} ${statusColor} shadow-sm hover:shadow-md transition-shadow overflow-hidden`}>
       <div className="p-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex-1">
-            <h3 className="font-medium text-lg">
-              {patient.first_name} {patient.last_name}
-            </h3>
+            <div className="flex items-center gap-2">
+              <h3 className="font-medium text-lg">
+                {patient.first_name} {patient.last_name}
+              </h3>
+              {patient.practitionerName && (
+                <Badge className={getPractitionerColor(patient.assignedPractitionerId)}>
+                  {patient.practitionerName}
+                </Badge>
+              )}
+            </div>
             <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-sm text-muted-foreground">
               <span className="flex items-center gap-1">
                 <Calendar size={14} />

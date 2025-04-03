@@ -7,17 +7,48 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
-import { MessageSquare, Check } from 'lucide-react';
+import { MessageSquare, Check, Filter } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const Patients: React.FC = () => {
-  const { patients, isLoading, error, dismissPatient, markAsContacted } = useFollowUp();
-  const [searchTerm, setSearchTerm] = useState('');
+  const { 
+    patients, 
+    isLoading, 
+    error, 
+    dismissPatient, 
+    markAsContacted, 
+    practitioners, 
+    selectedPractitionerId, 
+    setSelectedPractitionerId 
+  } = useFollowUp();
   
-  // Filter patients by search term
-  const filteredPatients = searchTerm ? 
-    patients.filter(patient => 
-      `${patient.first_name} ${patient.last_name}`.toLowerCase().includes(searchTerm.toLowerCase())
-    ) : patients;
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
+  
+  // Get practitioner color based on ID
+  const getPractitionerColor = (practitionerId?: number) => {
+    if (!practitionerId) return "bg-gray-100 text-gray-800";
+    switch (practitionerId) {
+      case 1: return "bg-blue-100 text-blue-800";
+      case 2: return "bg-green-100 text-green-800";
+      case 3: return "bg-purple-100 text-purple-800";
+      case 4: return "bg-amber-100 text-amber-800";
+      default: return "bg-gray-100 text-gray-800";
+    }
+  };
+  
+  // Filter patients by search term and practitioner
+  const filteredPatients = patients.filter(patient => {
+    // Filter by search term
+    const matchesSearch = !searchTerm || 
+      `${patient.first_name} ${patient.last_name}`.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    // Filter by practitioner
+    const matchesPractitioner = !selectedPractitionerId || 
+      patient.assignedPractitionerId === selectedPractitionerId;
+    
+    return matchesSearch && matchesPractitioner;
+  });
   
   return (
     <div className="space-y-6">
@@ -33,11 +64,59 @@ const Patients: React.FC = () => {
           <CardTitle>Patient Search</CardTitle>
         </CardHeader>
         <CardContent>
-          <Input
-            placeholder="Search by name..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+          <div className="space-y-4">
+            <Input
+              placeholder="Search by name..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            
+            <div className="flex items-center justify-between">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setShowFilters(!showFilters)}
+                className="flex items-center gap-2"
+              >
+                <Filter size={16} />
+                {showFilters ? 'Hide Filters' : 'Show Filters'}
+              </Button>
+              
+              {selectedPractitionerId && (
+                <Badge 
+                  variant="outline" 
+                  className="ml-2 cursor-pointer"
+                  onClick={() => setSelectedPractitionerId(null)}
+                >
+                  Filtered by practitioner × 
+                </Badge>
+              )}
+            </div>
+            
+            {showFilters && (
+              <div className="pt-2 pb-1 border-t">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Filter by Practitioner</label>
+                  <Select 
+                    value={selectedPractitionerId?.toString() || ""}
+                    onValueChange={(value) => setSelectedPractitionerId(value ? parseInt(value) : null)}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select a practitioner" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">All Practitioners</SelectItem>
+                      {practitioners.map(practitioner => (
+                        <SelectItem key={practitioner.id} value={practitioner.id.toString()}>
+                          {practitioner.first_name} {practitioner.last_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
       
@@ -59,6 +138,7 @@ const Patients: React.FC = () => {
                 <TableHead>Name</TableHead>
                 <TableHead>Last Appointment</TableHead>
                 <TableHead>Days Since</TableHead>
+                <TableHead>Practitioner</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
@@ -66,7 +146,7 @@ const Patients: React.FC = () => {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8">
+                  <TableCell colSpan={6} className="text-center py-8">
                     Loading patient data...
                   </TableCell>
                 </TableRow>
@@ -83,6 +163,15 @@ const Patients: React.FC = () => {
                     </TableCell>
                     <TableCell>
                       {patient.daysSinceLastAppointment || 'N/A'}
+                    </TableCell>
+                    <TableCell>
+                      {patient.practitionerName ? (
+                        <Badge className={getPractitionerColor(patient.assignedPractitionerId)}>
+                          {patient.practitionerName}
+                        </Badge>
+                      ) : (
+                        'N/A'
+                      )}
                     </TableCell>
                     <TableCell>
                       {patient.hasFutureAppointment ? (
@@ -106,6 +195,7 @@ const Patients: React.FC = () => {
                           variant="outline" 
                           size="sm"
                           onClick={() => dismissPatient(patient.id)}
+                          title="Dismiss patient"
                         >
                           <Check size={16} />
                         </Button>
@@ -114,6 +204,7 @@ const Patients: React.FC = () => {
                           size="sm" 
                           className="bg-cliniko-primary text-white"
                           onClick={() => markAsContacted(patient.id)}
+                          title="Mark as contacted"
                         >
                           <MessageSquare size={16} />
                         </Button>
@@ -123,7 +214,7 @@ const Patients: React.FC = () => {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8">
+                  <TableCell colSpan={6} className="text-center py-8">
                     No patients found
                   </TableCell>
                 </TableRow>
