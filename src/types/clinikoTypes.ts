@@ -90,8 +90,34 @@ export interface PatientWithFollowUpStatus extends ClinikoPatient {
   followUpStatus: 'pending' | 'dismissed' | 'contacted';
   hasFutureAppointment: boolean;
   assignedPractitionerId?: number;
-  // Added fields
   treatmentNotes?: string | null;
   reminderDate?: string | null;
-  practitionerName?: string | null; // Added for practitioner name display
+  practitionerName?: string | null;
+}
+
+// New interfaces for WorkCover tracking
+export interface WorkCoverReferral {
+  id: number;
+  patientId: number;
+  referralDate: string;
+  referralNumber: string;
+  approvedSessions: number;
+  usedSessions: number;
+  practitionerId: number;
+  status: 'active' | 'completed' | 'pending';
+  nextReviewDate: string | null;
+  notes?: string;
+}
+
+export interface PatientWithWorkCover extends PatientWithFollowUpStatus {
+  workCoverReferrals?: WorkCoverReferral[];
+}
+
+// Interface for booking gap detection
+export interface BookingGap {
+  patientId: number;
+  lastAppointmentDate: string;
+  gapDays: number;
+  status: 'cancelled' | 'missed' | 'large-gap' | 'no-followup';
+  appointmentType?: string;
 }

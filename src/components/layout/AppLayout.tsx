@@ -8,7 +8,10 @@ import {
   Settings, 
   MessageCircle, 
   BarChart, 
-  ChevronRight
+  ChevronRight,
+  Briefcase,
+  Stethoscope,
+  CalendarClock
 } from 'lucide-react';
 
 interface AppLayoutProps {
@@ -61,6 +64,22 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             collapsed={collapsed}
           />
           <NavItem 
+            to="/workcover" 
+            icon={<Briefcase size={20} />} 
+            label="WorkCover" 
+            description="Session tracking"
+            collapsed={collapsed}
+            badge="New"
+          />
+          <NavItem 
+            to="/booking-gaps" 
+            icon={<CalendarClock size={20} />} 
+            label="Booking Gaps" 
+            description="Gap detection"
+            collapsed={collapsed}
+            badge="New"
+          />
+          <NavItem 
             to="/sms" 
             icon={<MessageCircle size={20} />} 
             label="SMS Templates" 
@@ -108,9 +127,17 @@ interface NavItemProps {
   label: string;
   description?: string;
   collapsed?: boolean;
+  badge?: string;
 }
 
-const NavItem: React.FC<NavItemProps> = ({ to, icon, label, description, collapsed = false }) => {
+const NavItem: React.FC<NavItemProps> = ({ 
+  to, 
+  icon, 
+  label, 
+  description, 
+  collapsed = false,
+  badge
+}) => {
   return (
     <NavLink
       to={to}
@@ -123,8 +150,15 @@ const NavItem: React.FC<NavItemProps> = ({ to, icon, label, description, collaps
     >
       <div className="flex-shrink-0">{icon}</div>
       {!collapsed && (
-        <div className="flex flex-col overflow-hidden">
-          <span className="truncate">{label}</span>
+        <div className="flex flex-col flex-1 overflow-hidden">
+          <div className="flex items-center justify-between">
+            <span className="truncate">{label}</span>
+            {badge && (
+              <span className="bg-green-100 text-green-800 text-xs px-1.5 py-0.5 rounded-full">
+                {badge}
+              </span>
+            )}
+          </div>
           {description && <span className="text-xs text-muted-foreground truncate">{description}</span>}
         </div>
       )}
