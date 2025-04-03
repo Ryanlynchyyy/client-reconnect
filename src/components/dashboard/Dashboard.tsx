@@ -24,9 +24,14 @@ import {
   CalendarX2,
   UserX,
   ListFilter,
-  CalendarCheck
+  CalendarCheck,
+  ArrowUpRight,
+  CheckCircle2,
+  Users,
+  Hourglass,
+  Clock9
 } from 'lucide-react';
-import { format, subWeeks, subDays, isWithinInterval, startOfDay } from 'date-fns';
+import { format, subWeeks, subDays, isWithinInterval, startOfDay, isAfter } from 'date-fns';
 import { cn } from '@/lib/utils';
 import {
   Dialog,
@@ -348,33 +353,183 @@ const Dashboard: React.FC<DashboardProps> = ({ includeGapDetection = false }) =>
     }
   };
 
+  // Get urgency indicator class based on days since last appointment
+  const getUrgencyClass = (days?: number | null) => {
+    if (!days) return "bg-gray-100 text-gray-700";
+    if (days >= 90) return "bg-red-100 text-red-800 border-red-300";
+    if (days >= 60) return "bg-orange-100 text-orange-800 border-orange-300";
+    if (days >= 30) return "bg-amber-100 text-amber-800 border-amber-300";
+    return "bg-green-100 text-green-800 border-green-300";
+  };
+
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-        <div>
-          <h2 className="text-2xl font-bold">Patient Follow-Ups</h2>
-          <p className="text-muted-foreground">
-            {filteredPatients.length} patients haven't returned in {filterDays}+ days
-          </p>
+    <div className="space-y-6">
+      {/* Dashboard Header with Analytics Summary Cards */}
+      <div className="grid gap-6">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight text-cliniko-primary">Patient Follow-Ups</h2>
+            <p className="text-muted-foreground mt-1">
+              Track and engage with patients who haven't returned recently
+            </p>
+          </div>
+          
+          <div className="flex items-center gap-3">
+            <Button 
+              variant="outline" 
+              className="flex items-center gap-1 border-cliniko-primary text-cliniko-primary hover:bg-cliniko-muted"
+              onClick={handleRefresh}
+              disabled={isLoading}
+            >
+              <RefreshCw size={16} className={isLoading ? "animate-spin" : ""} />
+              <span className="hidden sm:inline">Refresh</span>
+            </Button>
+            
+            <Link to="/analytics">
+              <Button variant="default" className="bg-cliniko-primary hover:bg-cliniko-accent flex items-center gap-1">
+                <BarChart size={16} />
+                <span className="hidden sm:inline">Analytics</span>
+              </Button>
+            </Link>
+          </div>
         </div>
         
-        <div className="flex items-center gap-2">
-          <Button 
-            variant="outline" 
-            className="flex items-center gap-1"
-            onClick={handleRefresh}
-            disabled={isLoading}
-          >
-            <RefreshCw size={16} className={isLoading ? "animate-spin" : ""} />
-            <span className="hidden sm:inline">Refresh</span>
-          </Button>
-          
-          <Link to="/analytics">
-            <Button variant="default" className="bg-cliniko-primary hover:bg-cliniko-accent flex items-center gap-1">
-              <BarChart size={16} />
-              <span className="hidden sm:inline">Analytics</span>
-            </Button>
-          </Link>
+        {/* Analytics Summary Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card className="bg-gradient-to-br from-indigo-50 to-white border-indigo-100 hover:border-indigo-300 transition-colors">
+            <CardContent className="pt-6">
+              <div className="flex justify-between">
+                <div className="space-y-2">
+                  <p className="text-muted-foreground text-sm">Total Patients</p>
+                  <div className="flex items-baseline gap-1">
+                    <h3 className="text-2xl font-bold">{filteredPatients.length}</h3>
+                    <span className="text-sm text-muted-foreground">
+                      {filterDays}+ days
+                    </span>
+                  </div>
+                </div>
+                <div className="h-12 w-12 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-700">
+                  <Users size={24} />
+                </div>
+              </div>
+            </CardContent>
+            <CardFooter className="pt-0 pb-3">
+              <div className="grid grid-cols-2 gap-2 w-full">
+                <div className="text-center">
+                  <p className="text-xs text-muted-foreground">Priority</p>
+                  <p className="font-semibold text-amber-600">
+                    {rangePatients['90+'].length}
+                  </p>
+                </div>
+                <div className="text-center border-l border-gray-100">
+                  <p className="text-xs text-muted-foreground">Recent</p>
+                  <p className="font-semibold text-green-600">
+                    {rangePatients['30-60'].length}
+                  </p>
+                </div>
+              </div>
+            </CardFooter>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-sky-50 to-white border-sky-100 hover:border-sky-300 transition-colors">
+            <CardContent className="pt-6">
+              <div className="flex justify-between">
+                <div className="space-y-2">
+                  <p className="text-muted-foreground text-sm">Pending Follow-ups</p>
+                  <div className="flex items-baseline gap-1">
+                    <h3 className="text-2xl font-bold">{groupedPatients.pending.length}</h3>
+                    <span className="text-sm text-muted-foreground">
+                      patients
+                    </span>
+                  </div>
+                </div>
+                <div className="h-12 w-12 bg-sky-100 rounded-full flex items-center justify-center text-sky-700">
+                  <Hourglass size={24} />
+                </div>
+              </div>
+            </CardContent>
+            <CardFooter className="pt-0 pb-3">
+              <div className="flex items-center gap-1.5">
+                <div className="w-full bg-sky-100 h-1.5 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-sky-500 rounded-full" 
+                    style={{ 
+                      width: `${Math.min(100, (groupedPatients.pending.length / filteredPatients.length) * 100).toFixed(0)}%` 
+                    }}
+                  ></div>
+                </div>
+                <span className="text-xs font-medium">
+                  {Math.min(100, ((groupedPatients.pending.length / filteredPatients.length) * 100).toFixed(0))}%
+                </span>
+              </div>
+            </CardFooter>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-amber-50 to-white border-amber-100 hover:border-amber-300 transition-colors">
+            <CardContent className="pt-6">
+              <div className="flex justify-between">
+                <div className="space-y-2">
+                  <p className="text-muted-foreground text-sm">Contacted Patients</p>
+                  <div className="flex items-baseline gap-1">
+                    <h3 className="text-2xl font-bold">{groupedPatients.contacted.length}</h3>
+                    <span className="text-sm text-muted-foreground">
+                      awaiting response
+                    </span>
+                  </div>
+                </div>
+                <div className="h-12 w-12 bg-amber-100 rounded-full flex items-center justify-center text-amber-700">
+                  <MessageSquare size={24} />
+                </div>
+              </div>
+            </CardContent>
+            <CardFooter className="pt-0 pb-3">
+              <div className="flex items-center gap-1 text-sm">
+                <Bell size={14} className="text-amber-600" />
+                <span className="text-muted-foreground">
+                  {groupedPatients.contacted.length > 0 ? 
+                    `${groupedPatients.contacted.length} follow-up${groupedPatients.contacted.length !== 1 ? 's' : ''} in progress` : 
+                    'No active follow-ups'}
+                </span>
+              </div>
+            </CardFooter>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-red-50 to-white border-red-100 hover:border-red-300 transition-colors">
+            <CardContent className="pt-6">
+              <div className="flex justify-between">
+                <div className="space-y-2">
+                  <p className="text-muted-foreground text-sm">Missed Appointments</p>
+                  <div className="flex items-baseline gap-1">
+                    <h3 className="text-2xl font-bold">
+                      {cancelledAppointments.filter(a => a.status === "missed" || a.status === "cancelled").length}
+                    </h3>
+                    <span className="text-sm text-muted-foreground">
+                      need attention
+                    </span>
+                  </div>
+                </div>
+                <div className="h-12 w-12 bg-red-100 rounded-full flex items-center justify-center text-red-700">
+                  <CalendarX2 size={24} />
+                </div>
+              </div>
+            </CardContent>
+            <CardFooter className="pt-0 pb-3">
+              <div className="grid grid-cols-2 gap-2 w-full">
+                <div className="text-center">
+                  <p className="text-xs text-muted-foreground">No-shows</p>
+                  <p className="font-semibold text-red-600">
+                    {cancelledAppointments.filter(a => a.status === "missed").length}
+                  </p>
+                </div>
+                <div className="text-center border-l border-gray-100">
+                  <p className="text-xs text-muted-foreground">Cancelled</p>
+                  <p className="font-semibold text-orange-600">
+                    {cancelledAppointments.filter(a => a.status === "cancelled").length}
+                  </p>
+                </div>
+              </div>
+            </CardFooter>
+          </Card>
         </div>
       </div>
       
@@ -386,134 +541,157 @@ const Dashboard: React.FC<DashboardProps> = ({ includeGapDetection = false }) =>
         </Card>
       )}
       
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <Card className="lg:col-span-2">
-          <CardHeader className="pb-2">
-            <div className="relative w-full">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={16} />
-              <Input 
-                placeholder="Search by name or phone number..." 
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9 pr-8 w-full"
-              />
-              {searchTerm && (
-                <button 
-                  onClick={() => setSearchTerm('')}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  <X size={16} />
-                </button>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap items-center gap-2">
-              <Button 
-                variant="outline" 
-                size="sm"
-                className="flex items-center gap-1"
-                onClick={() => setIsFilterOpen(!isFilterOpen)}
+      {/* Search and Filters Panel */}
+      <Card className="shadow-sm">
+        <CardHeader className="pb-0">
+          <div className="relative w-full">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={16} />
+            <Input 
+              placeholder="Search by name, phone, or treatment notes..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9 pr-8 w-full border-cliniko-muted focus-visible:ring-cliniko-primary"
+            />
+            {searchTerm && (
+              <button 
+                onClick={() => setSearchTerm('')}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
               >
-                <Filter size={14} />
-                Filters
-                <ChevronDown size={14} className={cn(isFilterOpen && "transform rotate-180")} />
-              </Button>
-              
-              <Badge variant="outline" className="flex items-center gap-1">
-                Days: {filterDays}+
+                <X size={16} />
+              </button>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button 
+              variant="outline" 
+              size="sm"
+              className="flex items-center gap-1 border-cliniko-muted text-cliniko-primary"
+              onClick={() => setIsFilterOpen(!isFilterOpen)}
+            >
+              <Filter size={14} />
+              Filters
+              <ChevronDown size={14} className={cn(isFilterOpen && "transform rotate-180")} />
+            </Button>
+            
+            <Badge variant="outline" className="flex items-center gap-1 bg-indigo-50 text-indigo-700 border-indigo-200">
+              {filterDays}+ days since last visit
+            </Badge>
+            
+            {selectedPractitionerId && (
+              <Badge 
+                variant="outline" 
+                className={cn("cursor-pointer", getPractitionerColor(selectedPractitionerId))}
+                onClick={() => setSelectedPractitionerId(null)}
+              >
+                {practitioners.find(p => p.id === selectedPractitionerId)?.first_name || 'Practitioner'} ×
               </Badge>
-              
-              {selectedPractitionerId && (
-                <Badge 
-                  variant="outline" 
-                  className={cn("cursor-pointer", getPractitionerColor(selectedPractitionerId))}
-                  onClick={() => setSelectedPractitionerId(null)}
-                >
-                  {practitioners.find(p => p.id === selectedPractitionerId)?.first_name || 'Practitioner'} ×
-                </Badge>
-              )}
+            )}
 
-              {timeRange !== 'all' && (
-                <Badge variant="outline" className="bg-purple-50 text-purple-800 border-purple-300 cursor-pointer" onClick={() => setTimeRange('all')}>
-                  {timeRange === '2-weeks' ? '2+ weeks' : timeRange === 'this-week' ? 'This week' : 'Today'} ×
-                </Badge>
-              )}
-              
-              {appointmentCountFilter !== 'all' && (
-                <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-300 cursor-pointer" onClick={() => setAppointmentCountFilter('all')}>
-                  1-2 appointments ×
-                </Badge>
-              )}
-              
-              {appointmentStatusFilter !== 'all' && (
-                <Badge variant="outline" className="bg-red-50 text-red-800 border-red-300 cursor-pointer" onClick={() => setAppointmentStatusFilter('all')}>
-                  {appointmentStatusFilter === 'cancelled' ? 'Cancelled' : 'No Show'} ×
-                </Badge>
-              )}
-              
-              {isFilterOpen && (
-                <div className="w-full mt-2 bg-gray-50 p-3 rounded-md grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {timeRange !== 'all' && (
+              <Badge variant="outline" className="bg-purple-50 text-purple-800 border-purple-300 cursor-pointer" onClick={() => setTimeRange('all')}>
+                {timeRange === '2-weeks' ? '2+ weeks' : timeRange === 'this-week' ? 'This week' : 'Today'} ×
+              </Badge>
+            )}
+            
+            {appointmentCountFilter !== 'all' && (
+              <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-300 cursor-pointer" onClick={() => setAppointmentCountFilter('all')}>
+                1-2 appointments ×
+              </Badge>
+            )}
+            
+            {appointmentStatusFilter !== 'all' && (
+              <Badge variant="outline" className="bg-red-50 text-red-800 border-red-300 cursor-pointer" onClick={() => setAppointmentStatusFilter('all')}>
+                {appointmentStatusFilter === 'cancelled' ? 'Cancelled' : 'No Show'} ×
+              </Badge>
+            )}
+            
+            {/* Expanded Filter Panel */}
+            {isFilterOpen && (
+              <div className="w-full mt-4 bg-gray-50 p-4 rounded-md border border-gray-100 shadow-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   <div>
-                    <p className="text-sm font-medium mb-2">Days Since Last Visit</p>
-                    <div className="flex space-x-1">
+                    <p className="text-sm font-medium mb-2 text-gray-700">Days Since Last Visit</p>
+                    <div className="flex flex-wrap gap-2">
                       <Button 
                         variant={filterDays === 30 ? "default" : "outline"}
                         onClick={() => setFilterDays(30)}
                         size="sm"
-                        className="flex-1"
+                        className={filterDays === 30 ? 
+                          "bg-cliniko-primary hover:bg-cliniko-accent" : 
+                          "hover:bg-cliniko-muted hover:text-cliniko-primary"
+                        }
                       >
-                        30+
+                        30+ days
                       </Button>
                       <Button 
                         variant={filterDays === 60 ? "default" : "outline"}
                         onClick={() => setFilterDays(60)}
                         size="sm"
-                        className="flex-1"
+                        className={filterDays === 60 ? 
+                          "bg-cliniko-primary hover:bg-cliniko-accent" : 
+                          "hover:bg-cliniko-muted hover:text-cliniko-primary"
+                        }
                       >
-                        60+
+                        60+ days
                       </Button>
                       <Button 
                         variant={filterDays === 90 ? "default" : "outline"}
                         onClick={() => setFilterDays(90)}
                         size="sm"
-                        className="flex-1"
+                        className={filterDays === 90 ? 
+                          "bg-cliniko-primary hover:bg-cliniko-accent" : 
+                          "hover:bg-cliniko-muted hover:text-cliniko-primary"
+                        }
                       >
-                        90+
+                        90+ days
                       </Button>
                     </div>
                   </div>
                   
                   <div>
-                    <p className="text-sm font-medium mb-2">Sort By</p>
-                    <div className="flex space-x-1">
+                    <p className="text-sm font-medium mb-2 text-gray-700">Sort By</p>
+                    <div className="flex space-x-2">
                       <Button 
                         variant={sortBy === 'date' ? "default" : "outline"}
-                        onClick={() => setSortBy('date')}
+                        onClick={() => {
+                          setSortBy('date');
+                          setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
+                        }}
                         size="sm"
-                        className="flex-1"
+                        className={sortBy === 'date' ? 
+                          "bg-cliniko-primary hover:bg-cliniko-accent flex-1" : 
+                          "hover:bg-cliniko-muted hover:text-cliniko-primary flex-1"
+                        }
                       >
                         <Calendar size={14} className="mr-1 inline" />
-                        Date
+                        Date {sortBy === 'date' && (sortOrder === 'asc' ? '↑' : '↓')}
                       </Button>
                       <Button 
                         variant={sortBy === 'name' ? "default" : "outline"}
-                        onClick={() => setSortBy('name')}
+                        onClick={() => {
+                          setSortBy('name');
+                          setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
+                        }}
                         size="sm"
-                        className="flex-1"
+                        className={sortBy === 'name' ? 
+                          "bg-cliniko-primary hover:bg-cliniko-accent flex-1" : 
+                          "hover:bg-cliniko-muted hover:text-cliniko-primary flex-1"
+                        }
                       >
-                        Name
+                        Name {sortBy === 'name' && (sortOrder === 'asc' ? '↑' : '↓')}
                       </Button>
                     </div>
                   </div>
                   
                   <div>
-                    <p className="text-sm font-medium mb-2">Practitioner</p>
+                    <p className="text-sm font-medium mb-2 text-gray-700">Practitioner</p>
                     <Select 
                       value={selectedPractitionerId?.toString() || "all"}
                       onValueChange={(value) => setSelectedPractitionerId(value === "all" ? null : parseInt(value))}
                     >
-                      <SelectTrigger className="w-full">
+                      <SelectTrigger className="w-full text-sm">
                         <SelectValue placeholder="All practitioners" />
                       </SelectTrigger>
                       <SelectContent>
@@ -528,13 +706,16 @@ const Dashboard: React.FC<DashboardProps> = ({ includeGapDetection = false }) =>
                   </div>
 
                   <div>
-                    <p className="text-sm font-medium mb-2">Time Period</p>
-                    <div className="flex flex-wrap gap-1">
+                    <p className="text-sm font-medium mb-2 text-gray-700">Time Period</p>
+                    <div className="flex flex-wrap gap-2">
                       <Button 
                         variant={timeRange === 'all' ? "default" : "outline"}
                         onClick={() => setTimeRange('all')}
                         size="sm"
-                        className="flex-1"
+                        className={timeRange === 'all' ? 
+                          "bg-cliniko-primary hover:bg-cliniko-accent" : 
+                          "hover:bg-cliniko-muted hover:text-cliniko-primary"
+                        }
                       >
                         All Time
                       </Button>
@@ -542,7 +723,10 @@ const Dashboard: React.FC<DashboardProps> = ({ includeGapDetection = false }) =>
                         variant={timeRange === '2-weeks' ? "default" : "outline"}
                         onClick={() => setTimeRange('2-weeks')}
                         size="sm"
-                        className="flex-1"
+                        className={timeRange === '2-weeks' ? 
+                          "bg-cliniko-primary hover:bg-cliniko-accent" : 
+                          "hover:bg-cliniko-muted hover:text-cliniko-primary"
+                        }
                       >
                         2+ Weeks
                       </Button>
@@ -550,59 +734,68 @@ const Dashboard: React.FC<DashboardProps> = ({ includeGapDetection = false }) =>
                         variant={timeRange === 'this-week' ? "default" : "outline"}
                         onClick={() => setTimeRange('this-week')}
                         size="sm"
-                        className="flex-1"
+                        className={timeRange === 'this-week' ? 
+                          "bg-cliniko-primary hover:bg-cliniko-accent" : 
+                          "hover:bg-cliniko-muted hover:text-cliniko-primary"
+                        }
                       >
                         This Week
                       </Button>
-                      <Button 
-                        variant={timeRange === 'today' ? "default" : "outline"}
-                        onClick={() => setTimeRange('today')}
-                        size="sm"
-                        className="flex-1"
-                      >
-                        Today
-                      </Button>
                     </div>
                   </div>
-                  
+                </div>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4 pt-4 border-t border-gray-200">
                   <div>
-                    <p className="text-sm font-medium mb-2">Appointment Count</p>
-                    <div className="flex space-x-1">
+                    <p className="text-sm font-medium mb-2 text-gray-700">Appointment Count</p>
+                    <div className="flex space-x-2">
                       <Button 
                         variant={appointmentCountFilter === 'all' ? "default" : "outline"}
                         onClick={() => setAppointmentCountFilter('all')}
                         size="sm"
-                        className="flex-1"
+                        className={appointmentCountFilter === 'all' ? 
+                          "bg-cliniko-primary hover:bg-cliniko-accent flex-1" : 
+                          "hover:bg-cliniko-muted hover:text-cliniko-primary flex-1"
+                        }
                       >
-                        All
+                        All Patients
                       </Button>
                       <Button 
                         variant={appointmentCountFilter === '1-2' ? "default" : "outline"}
                         onClick={() => setAppointmentCountFilter('1-2')}
                         size="sm"
-                        className="flex-1"
+                        className={appointmentCountFilter === '1-2' ? 
+                          "bg-cliniko-primary hover:bg-cliniko-accent flex-1" : 
+                          "hover:bg-cliniko-muted hover:text-cliniko-primary flex-1"
+                        }
                       >
-                        1-2 Visits
+                        1-2 Visits Only
                       </Button>
                     </div>
                   </div>
                   
                   <div>
-                    <p className="text-sm font-medium mb-2">Appointment Status</p>
-                    <div className="flex space-x-1">
+                    <p className="text-sm font-medium mb-2 text-gray-700">Appointment Status</p>
+                    <div className="flex space-x-2">
                       <Button 
                         variant={appointmentStatusFilter === 'all' ? "default" : "outline"}
                         onClick={() => setAppointmentStatusFilter('all')}
                         size="sm"
-                        className="flex-1"
+                        className={appointmentStatusFilter === 'all' ? 
+                          "bg-cliniko-primary hover:bg-cliniko-accent flex-1" : 
+                          "hover:bg-cliniko-muted hover:text-cliniko-primary flex-1"
+                        }
                       >
-                        All
+                        All Status
                       </Button>
                       <Button 
                         variant={appointmentStatusFilter === 'cancelled' ? "default" : "outline"}
                         onClick={() => setAppointmentStatusFilter('cancelled')}
                         size="sm"
-                        className="flex-1"
+                        className={appointmentStatusFilter === 'cancelled' ? 
+                          "bg-cliniko-primary hover:bg-cliniko-accent flex-1" : 
+                          "hover:bg-cliniko-muted hover:text-cliniko-primary flex-1"
+                        }
                       >
                         <CalendarX2 className="mr-1 h-3 w-3" /> 
                         Cancelled
@@ -611,55 +804,24 @@ const Dashboard: React.FC<DashboardProps> = ({ includeGapDetection = false }) =>
                         variant={appointmentStatusFilter === 'no-show' ? "default" : "outline"}
                         onClick={() => setAppointmentStatusFilter('no-show')}
                         size="sm"
-                        className="flex-1"
+                        className={appointmentStatusFilter === 'no-show' ? 
+                          "bg-cliniko-primary hover:bg-cliniko-accent flex-1" : 
+                          "hover:bg-cliniko-muted hover:text-cliniko-primary flex-1"
+                        }
                       >
                         <UserX className="mr-1 h-3 w-3" />
-                        No Show
+                        No Shows
                       </Button>
                     </div>
                   </div>
                 </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Patient Summary</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-3 gap-2 text-center">
-              <StatusBadge count={groupedPatients.pending.length} label="Pending" color="bg-blue-100 text-blue-800" />
-              <StatusBadge count={groupedPatients.contacted.length} label="Contacted" color="bg-amber-100 text-amber-800" />
-              <StatusBadge count={groupedPatients.dismissed.length} label="Dismissed" color="bg-gray-100 text-gray-800" />
-            </div>
-            
-            <div className="mt-3 pt-3 border-t">
-              <div className="grid grid-cols-3 gap-2 text-center">
-                <StatusBadge count={rangePatients['30-60'].length} label="30-60 days" color="bg-blue-50 text-blue-800" />
-                <StatusBadge count={rangePatients['60-90'].length} label="60-90 days" color="bg-amber-50 text-amber-800" />
-                <StatusBadge count={rangePatients['90+'].length} label="90+ days" color="bg-red-50 text-red-800" />
               </div>
-            </div>
-            
-            <div className="mt-3 pt-3 border-t">
-              <div className="grid grid-cols-3 gap-2 text-center">
-                <StatusBadge count={cancelledAppointments.filter(a => a.status === "cancelled").length} 
-                  label="Cancelled" color="bg-orange-50 text-orange-800" />
-                <StatusBadge count={cancelledAppointments.filter(a => a.status === "missed").length} 
-                  label="No Show" color="bg-red-50 text-red-800" />
-                <StatusBadge 
-                  count={appointmentCountFilter === '1-2' ? groupedPatients.all.filter(p => p.id % 3 !== 0).length : 0} 
-                  label="1-2 Visits" 
-                  color="bg-purple-50 text-purple-800" 
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
       
+      {/* Patient Follow-Up Content */}
       {isLoading ? (
         <LoadingSkeleton />
       ) : (
@@ -667,42 +829,42 @@ const Dashboard: React.FC<DashboardProps> = ({ includeGapDetection = false }) =>
           defaultValue={includeGapDetection ? "follow-ups" : "pending"} 
           className="w-full"
         >
-          <TabsList className="mb-4">
+          <TabsList className="mb-4 p-1 bg-gray-100 border border-gray-200">
             {includeGapDetection && (
-              <TabsTrigger value="follow-ups" className="flex items-center gap-2">
+              <TabsTrigger value="follow-ups" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-cliniko-primary">
                 <ListFilter size={14} />
                 All Follow-Ups
               </TabsTrigger>
             )}
-            <TabsTrigger value="pending" className="flex items-center gap-2">
-              <Calendar size={14} />
+            <TabsTrigger value="pending" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-cliniko-primary">
+              <Clock9 size={14} />
               Pending
-              <Badge className="bg-blue-500 text-white ml-1">{groupedPatients.pending.length}</Badge>
+              <Badge className="ml-1 bg-cliniko-primary">{groupedPatients.pending.length}</Badge>
             </TabsTrigger>
-            <TabsTrigger value="contacted" className="flex items-center gap-2">
+            <TabsTrigger value="contacted" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-cliniko-primary">
               <MessageSquare size={14} />
               Contacted
-              <Badge className="bg-amber-500 text-white ml-1">{groupedPatients.contacted.length}</Badge>
+              <Badge className="ml-1 bg-amber-500">{groupedPatients.contacted.length}</Badge>
             </TabsTrigger>
-            <TabsTrigger value="cancelled" className="flex items-center gap-2">
+            <TabsTrigger value="cancelled" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-cliniko-primary">
               <CalendarX2 size={14} />
               Cancelled
-              <Badge className="bg-orange-500 text-white ml-1">{cancelledAppointments.filter(a => a.status === "cancelled").length}</Badge>
+              <Badge className="ml-1 bg-orange-500">{cancelledAppointments.filter(a => a.status === "cancelled").length}</Badge>
             </TabsTrigger>
-            <TabsTrigger value="no-show" className="flex items-center gap-2">
+            <TabsTrigger value="no-show" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-cliniko-primary">
               <UserX size={14} />
               No-Show
-              <Badge className="bg-red-500 text-white ml-1">{cancelledAppointments.filter(a => a.status === "missed").length}</Badge>
+              <Badge className="ml-1 bg-red-500">{cancelledAppointments.filter(a => a.status === "missed").length}</Badge>
             </TabsTrigger>
-            <TabsTrigger value="dismissed" className="flex items-center gap-2">
-              <Check size={14} />
+            <TabsTrigger value="dismissed" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-cliniko-primary">
+              <CheckCircle2 size={14} />
               Dismissed
-              <Badge className="bg-gray-500 text-white ml-1">{groupedPatients.dismissed.length}</Badge>
+              <Badge className="ml-1 bg-gray-500">{groupedPatients.dismissed.length}</Badge>
             </TabsTrigger>
           </TabsList>
 
           {includeGapDetection && (
-            <TabsContent value="follow-ups" className="space-y-4">
+            <TabsContent value="follow-ups" className="space-y-6">
               <DashboardSection 
                 title="Weekly Follow-Ups"
                 subtitle="Patients who haven't returned in 2+ weeks"
@@ -713,18 +875,20 @@ const Dashboard: React.FC<DashboardProps> = ({ includeGapDetection = false }) =>
                 onSendSMS={handleSendSMS}
                 onRemindLater={handleRemindLater}
                 getPractitionerColor={getPractitionerColor}
+                getUrgencyClass={getUrgencyClass}
               />
               
               <DashboardSection 
                 title="New Patients (1-2 Visits Only)"
                 subtitle="Patients who had only 1-2 appointments and stopped"
                 patients={sortedPatients.filter(p => p.id % 3 !== 0).slice(0, 6)} // Mock filter for demo
-                icon={<UserX className="h-5 w-5 text-purple-600" />}
+                icon={<Users className="h-5 w-5 text-purple-600" />}
                 accent="purple"
                 onDismiss={handleDismissRequest}
                 onSendSMS={handleSendSMS}
                 onRemindLater={handleRemindLater}
                 getPractitionerColor={getPractitionerColor}
+                getUrgencyClass={getUrgencyClass}
               />
               
               <DashboardSection 
@@ -737,6 +901,7 @@ const Dashboard: React.FC<DashboardProps> = ({ includeGapDetection = false }) =>
                 onSendSMS={handleSendSMS}
                 onRemindLater={handleRemindLater}
                 getPractitionerColor={getPractitionerColor}
+                getUrgencyClass={getUrgencyClass}
               />
             </TabsContent>
           )}
@@ -744,11 +909,11 @@ const Dashboard: React.FC<DashboardProps> = ({ includeGapDetection = false }) =>
           {/* Standard patient tabs */}
           {Object.entries(groupedPatients).map(([status, patients]) => (
             status !== 'all' && (
-              <TabsContent key={status} value={status} className="space-y-4">
+              <TabsContent key={status} value={status} className="space-y-6">
                 {patients.length === 0 ? (
                   <EmptyState />
                 ) : (
-                  <div className="grid grid-cols-1 gap-4">
+                  <div className="grid grid-cols-1 gap-6">
                     {status === 'pending' && (
                       <PatientGroup 
                         title="Priority Follow-Ups"
@@ -760,6 +925,8 @@ const Dashboard: React.FC<DashboardProps> = ({ includeGapDetection = false }) =>
                         onSendSMS={handleSendSMS}
                         onRemindLater={handleRemindLater}
                         getPractitionerColor={getPractitionerColor}
+                        getUrgencyClass={getUrgencyClass}
+                        highlightPriority={true}
                       />
                     )}
                     
@@ -771,6 +938,7 @@ const Dashboard: React.FC<DashboardProps> = ({ includeGapDetection = false }) =>
                       onSendSMS={handleSendSMS}
                       onRemindLater={handleRemindLater}
                       getPractitionerColor={getPractitionerColor}
+                      getUrgencyClass={getUrgencyClass}
                     />
                   </div>
                 )}
@@ -780,14 +948,19 @@ const Dashboard: React.FC<DashboardProps> = ({ includeGapDetection = false }) =>
           
           {/* Cancelled appointments tab */}
           <TabsContent value="cancelled" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Cancelled Appointments</CardTitle>
-                <CardDescription>
-                  Patients who cancelled their appointments and may need follow-up
-                </CardDescription>
+            <Card className="border-orange-100 shadow-sm">
+              <CardHeader className="bg-gradient-to-r from-orange-50 to-white border-b border-orange-100">
+                <div className="flex items-center gap-3">
+                  <CalendarX2 className="h-5 w-5 text-orange-600" />
+                  <div>
+                    <CardTitle>Cancelled Appointments</CardTitle>
+                    <CardDescription>
+                      Patients who cancelled their appointments and may need follow-up
+                    </CardDescription>
+                  </div>
+                </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-6">
                 <AppointmentList 
                   gaps={cancelledAppointments.filter(a => a.status === "cancelled")} 
                   onSendMessage={handleSendMessageToGapPatient} 
@@ -798,14 +971,19 @@ const Dashboard: React.FC<DashboardProps> = ({ includeGapDetection = false }) =>
           
           {/* No-show appointments tab */}
           <TabsContent value="no-show" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Missed Appointments</CardTitle>
-                <CardDescription>
-                  Patients who did not show up for their appointments
-                </CardDescription>
+            <Card className="border-red-100 shadow-sm">
+              <CardHeader className="bg-gradient-to-r from-red-50 to-white border-b border-red-100">
+                <div className="flex items-center gap-3">
+                  <UserX className="h-5 w-5 text-red-600" />
+                  <div>
+                    <CardTitle>Missed Appointments</CardTitle>
+                    <CardDescription>
+                      Patients who did not show up for their appointments
+                    </CardDescription>
+                  </div>
+                </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-6">
                 <AppointmentList 
                   gaps={cancelledAppointments.filter(a => a.status === "missed")} 
                   onSendMessage={handleSendMessageToGapPatient} 
@@ -816,6 +994,7 @@ const Dashboard: React.FC<DashboardProps> = ({ includeGapDetection = false }) =>
         </Tabs>
       )}
       
+      {/* Modals */}
       <Dialog open={dismissDialogOpen} onOpenChange={setDismissDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -1004,6 +1183,7 @@ interface DashboardSectionProps {
   onSendSMS: (patient: PatientWithFollowUpStatus) => void;
   onRemindLater: (patient: PatientWithFollowUpStatus) => void;
   getPractitionerColor: (practitionerId?: number) => string;
+  getUrgencyClass: (days?: number | null) => string;
 }
 
 const DashboardSection: React.FC<DashboardSectionProps> = ({
@@ -1015,23 +1195,32 @@ const DashboardSection: React.FC<DashboardSectionProps> = ({
   onDismiss,
   onSendSMS,
   onRemindLater,
-  getPractitionerColor
+  getPractitionerColor,
+  getUrgencyClass
 }) => {
   const accentColors = {
-    'blue': 'border-l-4 border-blue-500',
-    'purple': 'border-l-4 border-purple-500',
-    'red': 'border-l-4 border-red-500',
-    'green': 'border-l-4 border-green-500',
-    'amber': 'border-l-4 border-amber-500',
+    'blue': 'border-l-4 border-blue-500 shadow-sm',
+    'purple': 'border-l-4 border-purple-500 shadow-sm',
+    'red': 'border-l-4 border-red-500 shadow-sm',
+    'green': 'border-l-4 border-green-500 shadow-sm',
+    'amber': 'border-l-4 border-amber-500 shadow-sm',
+  };
+  
+  const headerBg = {
+    'blue': 'bg-gradient-to-r from-blue-50 to-white border-b border-blue-100',
+    'purple': 'bg-gradient-to-r from-purple-50 to-white border-b border-purple-100',
+    'red': 'bg-gradient-to-r from-red-50 to-white border-b border-red-100',
+    'green': 'bg-gradient-to-r from-green-50 to-white border-b border-green-100',
+    'amber': 'bg-gradient-to-r from-amber-50 to-white border-b border-amber-100',
   };
   
   if (patients.length === 0) return null;
   
   return (
     <Card className={accentColors[accent]}>
-      <CardHeader>
+      <CardHeader className={headerBg[accent]}>
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             {icon}
             <div>
               <CardTitle className="text-xl">{title}</CardTitle>
@@ -1043,7 +1232,7 @@ const DashboardSection: React.FC<DashboardSectionProps> = ({
           </Badge>
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pt-6">
         <div className="space-y-3">
           {patients.slice(0, 5).map(patient => (
             <PatientCard 
@@ -1053,12 +1242,13 @@ const DashboardSection: React.FC<DashboardSectionProps> = ({
               onSendSMS={onSendSMS}
               onRemindLater={onRemindLater}
               getPractitionerColor={getPractitionerColor}
+              getUrgencyClass={getUrgencyClass}
             />
           ))}
         </div>
         {patients.length > 5 && (
           <div className="mt-3 text-center">
-            <Button variant="ghost" size="sm">
+            <Button variant="outline" size="sm" className="text-cliniko-primary hover:bg-cliniko-muted">
               View {patients.length - 5} more patients
             </Button>
           </div>
@@ -1091,12 +1281,12 @@ const LoadingSkeleton = () => (
 );
 
 const EmptyState = () => (
-  <Card>
-    <CardContent className="flex flex-col items-center justify-center py-10">
-      <div className="rounded-full bg-gray-100 p-3 mb-4">
-        <Clock size={24} className="text-gray-400" />
+  <Card className="border-dashed border-2 border-gray-200">
+    <CardContent className="flex flex-col items-center justify-center py-12">
+      <div className="rounded-full bg-gray-100 p-4 mb-4">
+        <Clock size={32} className="text-gray-400" />
       </div>
-      <h3 className="text-lg font-semibold mb-1">No patients found</h3>
+      <h3 className="text-xl font-semibold mb-1">No patients found</h3>
       <p className="text-muted-foreground text-center max-w-md">
         There are no patients in this category matching your current filters.
       </p>
@@ -1112,6 +1302,8 @@ interface PatientGroupProps {
   onSendSMS: (patient: PatientWithFollowUpStatus) => void;
   onRemindLater: (patient: PatientWithFollowUpStatus) => void;
   getPractitionerColor: (practitionerId?: number) => string;
+  getUrgencyClass: (days?: number | null) => string;
+  highlightPriority?: boolean;
 }
 
 const PatientGroup: React.FC<PatientGroupProps> = ({ 
@@ -1121,18 +1313,20 @@ const PatientGroup: React.FC<PatientGroupProps> = ({
   onDismiss,
   onSendSMS,
   onRemindLater,
-  getPractitionerColor
+  getPractitionerColor,
+  getUrgencyClass,
+  highlightPriority = false
 }) => {
   const displayPatients = patients.slice(0, 10);
   const hasMore = patients.length > 10;
   
   return (
-    <Card>
-      <CardHeader className="pb-3">
+    <Card className={highlightPriority ? "border-red-200 shadow-sm" : "shadow-sm"}>
+      <CardHeader className={highlightPriority ? "bg-gradient-to-r from-red-50 to-white border-b border-red-100 pb-3" : "pb-3"}>
         <CardTitle className="text-xl">{title}</CardTitle>
         {subtitle && <CardDescription>{subtitle}</CardDescription>}
       </CardHeader>
-      <CardContent className="pt-0">
+      <CardContent className="pt-6">
         {displayPatients.length === 0 ? (
           <p className="text-center text-muted-foreground py-4">No patients in this category</p>
         ) : (
@@ -1145,6 +1339,8 @@ const PatientGroup: React.FC<PatientGroupProps> = ({
                 onSendSMS={onSendSMS}
                 onRemindLater={onRemindLater}
                 getPractitionerColor={getPractitionerColor}
+                getUrgencyClass={getUrgencyClass}
+                highlightUrgent={highlightPriority}
               />
             ))}
           </div>
@@ -1152,7 +1348,7 @@ const PatientGroup: React.FC<PatientGroupProps> = ({
       </CardContent>
       {hasMore && (
         <CardFooter className="pt-0 pb-3 flex justify-center">
-          <Button variant="ghost" size="sm">
+          <Button variant="outline" size="sm" className="text-cliniko-primary hover:bg-cliniko-muted">
             View {patients.length - 10} more patients
           </Button>
         </CardFooter>
@@ -1167,6 +1363,8 @@ interface PatientCardProps {
   onSendSMS: (patient: PatientWithFollowUpStatus) => void;
   onRemindLater: (patient: PatientWithFollowUpStatus) => void;
   getPractitionerColor: (practitionerId?: number) => string;
+  getUrgencyClass: (days?: number | null) => string;
+  highlightUrgent?: boolean;
 }
 
 const PatientCard: React.FC<PatientCardProps> = ({ 
@@ -1174,7 +1372,9 @@ const PatientCard: React.FC<PatientCardProps> = ({
   onDismiss, 
   onSendSMS, 
   onRemindLater,
-  getPractitionerColor 
+  getPractitionerColor,
+  getUrgencyClass,
+  highlightUrgent = false
 }) => {
   const lastAppointmentDate = patient.lastAppointmentDate 
     ? format(new Date(patient.lastAppointmentDate), 'MMM d, yyyy')
@@ -1185,17 +1385,26 @@ const PatientCard: React.FC<PatientCardProps> = ({
   const primaryPhone = phoneNumbers.find(p => p.is_primary)?.number || 
                       phoneNumbers[0]?.number || 'No phone number';
   
-  const statusColor = {
-    'pending': 'border-blue-400',
-    'contacted': 'border-amber-400',
-    'dismissed': 'border-gray-400'
-  }[patient.followUpStatus];
+  const statusColors = {
+    'pending': 'border-l-4 border-blue-400',
+    'contacted': 'border-l-4 border-amber-400',
+    'dismissed': 'border-l-4 border-gray-400',
+    'high-priority': 'border-l-4 border-red-500'
+  };
   
-  const practitionerStyle = patient.assignedPractitionerId ? 
-    `border-l-4 ${getPractitionerColor(patient.assignedPractitionerId)}` : 'border-l-4 border-gray-300';
+  const urgencyClass = getUrgencyClass(patient.daysSinceLastAppointment);
+  const isUrgent = patient.daysSinceLastAppointment && patient.daysSinceLastAppointment >= 90;
+  
+  let statusColor = statusColors[patient.followUpStatus];
+  if (highlightUrgent && isUrgent) {
+    statusColor = statusColors['high-priority'];
+  }
+  
+  const practitionerBadge = patient.assignedPractitionerId ? 
+    getPractitionerColor(patient.assignedPractitionerId) : '';
 
   return (
-    <div className={`bg-white rounded-lg ${practitionerStyle} ${statusColor} shadow-sm hover:shadow-md transition-shadow overflow-hidden`}>
+    <div className={`bg-white rounded-lg ${statusColor} shadow-sm hover:shadow transition-shadow overflow-hidden`}>
       <div className="p-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex-1">
@@ -1204,22 +1413,22 @@ const PatientCard: React.FC<PatientCardProps> = ({
                 {patient.first_name} {patient.last_name}
               </h3>
               {patient.practitionerName && (
-                <Badge className={getPractitionerColor(patient.assignedPractitionerId)}>
+                <Badge className={practitionerBadge}>
                   {patient.practitionerName}
                 </Badge>
               )}
             </div>
             <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-sm text-muted-foreground">
               <span className="flex items-center gap-1">
-                <Calendar size={14} />
+                <Calendar size={14} className="text-gray-600" />
                 {lastAppointmentDate}
               </span>
-              <span className="flex items-center gap-1">
+              <span className={`flex items-center gap-1 rounded-full px-2 py-0.5 ${urgencyClass}`}>
                 <Clock size={14} />
                 {patient.daysSinceLastAppointment || 'N/A'} days ago
               </span>
               <span className="flex items-center gap-1">
-                <MessageSquare size={14} />
+                <MessageSquare size={14} className="text-gray-600" />
                 {primaryPhone}
               </span>
             </div>
@@ -1230,20 +1439,20 @@ const PatientCard: React.FC<PatientCardProps> = ({
               variant="outline"
               size="sm"
               onClick={() => onRemindLater(patient)}
-              className="text-gray-600 hover:text-gray-800"
+              className="border-gray-200 text-gray-600 hover:text-gray-800 hover:bg-gray-50"
             >
               <Bell size={14} className="mr-1" />
-              <span>Remind Later</span>
+              <span className="hidden sm:inline">Remind Later</span>
             </Button>
             
             <Button
               variant="outline"
               size="sm"
               onClick={() => onDismiss(patient)}
-              className="text-gray-600 hover:text-gray-800"
+              className="border-gray-200 text-gray-600 hover:text-gray-800 hover:bg-gray-50"
             >
               <Check size={14} className="mr-1" />
-              <span>Dismiss/Thank</span>
+              <span className="hidden sm:inline">Dismiss</span>
             </Button>
             
             <Button
@@ -1254,7 +1463,7 @@ const PatientCard: React.FC<PatientCardProps> = ({
               onClick={() => onSendSMS(patient)}
             >
               <MessageSquare size={14} className="mr-1" />
-              <span>Send Message</span>
+              <span className="hidden sm:inline">Send Message</span>
             </Button>
           </div>
         </div>
