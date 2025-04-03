@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Calendar, Clock, Filter, Search, User, ScrollText, Check, CalendarX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -11,6 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Slider } from '@/components/ui/slider';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { SetStateAction, Dispatch } from 'react';
 
 interface PractitionerOption {
   id: number;
@@ -26,7 +26,7 @@ interface FilterProps {
   minGapDays: number;
   setMinGapDays: (days: number) => void;
   statusFilters: Record<string, boolean>;
-  setStatusFilters: (filters: Record<string, boolean>) => void;
+  setStatusFilters: Dispatch<SetStateAction<Record<string, boolean>>>;
   appointmentTypes: string[];
   selectedAppointmentTypes: string[];
   setSelectedAppointmentTypes: (types: string[]) => void;
@@ -57,10 +57,10 @@ const EnhancedFilters: React.FC<FilterProps> = ({
   const [filtersOpen, setFiltersOpen] = React.useState(false);
   
   const handleStatusFilterChange = (status: string, checked: boolean) => {
-    setStatusFilters({
-      ...statusFilters,
+    setStatusFilters(prevFilters => ({
+      ...prevFilters,
       [status]: checked
-    });
+    }));
   };
   
   const handleAppointmentTypeChange = (type: string, checked: boolean) => {

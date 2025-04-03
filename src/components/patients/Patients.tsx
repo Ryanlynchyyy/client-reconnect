@@ -23,7 +23,7 @@ const Patients: React.FC = () => {
   
   const [searchTerm, setSearchTerm] = useState('');
   const [minGapDays, setMinGapDays] = useState(14);
-  const [statusFilters, setStatusFilters] = useState({
+  const [statusFilters, setStatusFilters] = useState<Record<string, boolean>>({
     cancelled: true,
     'no-followup': true,
     'large-gap': true
