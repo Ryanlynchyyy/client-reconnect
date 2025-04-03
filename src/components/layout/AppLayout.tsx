@@ -1,4 +1,3 @@
-
 import React, { ReactNode, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -9,8 +8,7 @@ import {
   MessageCircle, 
   BarChart, 
   ChevronRight,
-  Briefcase,
-  CalendarX2
+  Briefcase
 } from 'lucide-react';
 
 interface AppLayoutProps {
@@ -67,14 +65,6 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             icon={<Briefcase size={20} />} 
             label="WorkCover" 
             description="Session tracking"
-            collapsed={collapsed}
-            badge="New"
-          />
-          <NavItem 
-            to="/cancelled-appointments" 
-            icon={<CalendarX2 size={20} />} 
-            label="Cancelled Appointments" 
-            description="Cancellation tracking"
             collapsed={collapsed}
             badge="New"
           />

@@ -29,7 +29,7 @@ const Index = () => {
             </Alert>
           )}
           
-          <Dashboard />
+          <Dashboard includeGapDetection={true} />
         </div>
       </AppLayout>
     </FollowUpProvider>

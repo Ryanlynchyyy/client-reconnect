@@ -10,7 +10,6 @@ import Settings from "./pages/Settings";
 import SMSTemplates from "./pages/SMSTemplates";
 import Analytics from "./pages/Analytics";
 import WorkCover from "./pages/WorkCover";
-import CancelledAppointments from "./pages/CancelledAppointments";
 import NotFound from "./pages/NotFound";
 import { ThemeProvider } from "next-themes";
 
@@ -31,7 +30,6 @@ const App = () => (
             <Route path="/sms" element={<SMSTemplates />} />
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/workcover" element={<WorkCover />} />
-            <Route path="/cancelled-appointments" element={<CancelledAppointments />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
