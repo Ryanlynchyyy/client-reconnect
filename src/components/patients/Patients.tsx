@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useFollowUp } from '@/contexts/FollowUpContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -34,24 +33,19 @@ const Patients: React.FC = () => {
     const matchesPractitioner = !selectedPractitionerId || 
       patient.assignedPractitionerId === selectedPractitionerId;
     
-    // Time filter condition
     let matchesTimeFilter = true;
     if (timeFilter === 'initial-2-weeks') {
-      // Filter for patients within 2 weeks of their initial appointment
       matchesTimeFilter = Boolean(patient.isInitialAppointment && 
         patient.daysSinceFirstAppointment && 
         patient.daysSinceFirstAppointment <= 14);
     } else if (timeFilter === 'last-30-days') {
-      // Filter for patients seen in the last 30 days
       matchesTimeFilter = Boolean(patient.daysSinceLastAppointment && 
         patient.daysSinceLastAppointment <= 30);
     } else if (timeFilter === 'last-90-days') {
-      // Filter for patients seen in the last 90 days
       matchesTimeFilter = Boolean(patient.daysSinceLastAppointment && 
         patient.daysSinceLastAppointment <= 90);
     }
 
-    // Appointment status condition
     let matchesStatus = true;
     if (appointmentStatusFilter === 'cancelled') {
       matchesStatus = Boolean(patient.hasRecentCancellation);

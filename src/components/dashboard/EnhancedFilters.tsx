@@ -119,7 +119,8 @@ const EnhancedFilters: React.FC<FilterProps> = ({
                 <SelectValue placeholder="All Practitioners" />
               </SelectTrigger>
               <SelectContent className="bg-white border-beach-sand">
-                <SelectItem value="">All Practitioners</SelectItem>
+                {/* Fixed: Changed empty string to "all" */}
+                <SelectItem value="all">All Practitioners</SelectItem>
                 {practitioners.map(p => (
                   <SelectItem key={p.id} value={p.id.toString()}>{p.name}</SelectItem>
                 ))}

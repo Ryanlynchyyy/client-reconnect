@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { 
@@ -30,7 +29,6 @@ import { useToast } from '@/hooks/use-toast';
 import { GapStats } from './GapStats';
 import { AppointmentList } from './AppointmentList';
 
-// Mock data - in a real app this would come from your context or API
 const mockGaps = [
   {
     id: 1,
@@ -131,7 +129,6 @@ export function CancelledAppointmentsView() {
     return matchesSearch && matchesPractitioner && matchesStatus && matchesMinGap;
   });
 
-  // Sort the filtered gaps
   const sortedGaps = [...filteredGaps].sort((a, b) => {
     if (sortField === 'date') {
       return sortDirection === 'asc' 
