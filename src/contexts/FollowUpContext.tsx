@@ -1,7 +1,8 @@
+
 import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
 import { PatientWithFollowUpStatus, ClinikoAppointment, ClinikoPatient } from '@/types/clinikoTypes';
 import { clinikoApi } from '@/services/clinikoApi';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { getMockData } from '@/data/mockData';
 
 interface FollowUpContextType {
@@ -14,6 +15,7 @@ interface FollowUpContextType {
   filterDays: number;
   setFilterDays: (days: number) => void;
   filteredPatients: PatientWithFollowUpStatus[];
+  remindLater: (patientId: number, days: number) => void;
 }
 
 const FollowUpContext = createContext<FollowUpContextType | undefined>(undefined);
@@ -28,11 +30,27 @@ export const FollowUpProvider: React.FC<{ children: ReactNode }> = ({ children }
   const filteredPatients = React.useMemo(() => {
     return patients.filter(patient => {
       if (patient.hasFutureAppointment) return false;
-      if (patient.followUpStatus === 'dismissed') return false;
+      
+      // Check if patient has a pending reminder
+      const reminderDate = patient.reminderDate ? new Date(patient.reminderDate) : null;
+      const now = new Date();
+      if (reminderDate && reminderDate > now) return false;
+      
       return patient.daysSinceLastAppointment !== null && 
              patient.daysSinceLastAppointment >= filterDays;
     });
   }, [patients, filterDays]);
+
+  // Mock treatment notes for demonstration purposes
+  const mockTreatmentNotes = [
+    "Lower back pain treatment",
+    "Shoulder rehabilitation",
+    "Sports injury assessment",
+    "Neck and upper back treatment",
+    "Post-surgery rehabilitation",
+    "Chronic pain management",
+    "Posture assessment and correction"
+  ];
 
   const loadExampleData = async () => {
     try {
@@ -72,13 +90,18 @@ export const FollowUpProvider: React.FC<{ children: ReactNode }> = ({ children }
         
         const followUpStatus = Math.random() < 0.8 ? 'pending' : 'contacted';
         
+        // Add mock treatment notes
+        const treatmentNotes = mockTreatmentNotes[Math.floor(Math.random() * mockTreatmentNotes.length)];
+        
         return {
           ...patient,
           lastAppointmentDate,
           daysSinceLastAppointment,
           followUpStatus: followUpStatus as 'pending' | 'dismissed' | 'contacted',
           hasFutureAppointment,
-          assignedPractitionerId
+          assignedPractitionerId,
+          treatmentNotes,
+          reminderDate: null
         };
       }));
       
@@ -95,6 +118,7 @@ export const FollowUpProvider: React.FC<{ children: ReactNode }> = ({ children }
   const processPatientData = async (patients: ClinikoPatient[]): Promise<PatientWithFollowUpStatus[]> => {
     const now = new Date();
     const followUpStatuses = JSON.parse(localStorage.getItem('followup_statuses') || '{}');
+    const reminderDates = JSON.parse(localStorage.getItem('reminder_dates') || '{}');
     
     const processedPatients: PatientWithFollowUpStatus[] = [];
     
@@ -121,15 +145,20 @@ export const FollowUpProvider: React.FC<{ children: ReactNode }> = ({ children }
         let lastAppointmentDate: string | null = null;
         let daysSinceLastAppointment: number | null = null;
         let assignedPractitionerId: number | undefined;
+        let treatmentNotes: string | null = null;
         
         if (lastAppointment) {
           lastAppointmentDate = lastAppointment.starts_at;
           const lastDate = new Date(lastAppointment.starts_at);
           daysSinceLastAppointment = Math.floor((now.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
           assignedPractitionerId = lastAppointment.practitioner.id;
+          
+          // Extract treatment notes from appointment notes
+          treatmentNotes = lastAppointment.notes || null;
         }
         
         const savedStatus = followUpStatuses[patient.id] || 'pending';
+        const reminderDate = reminderDates[patient.id] || null;
         
         processedPatients.push({
           ...patient,
@@ -137,7 +166,9 @@ export const FollowUpProvider: React.FC<{ children: ReactNode }> = ({ children }
           daysSinceLastAppointment,
           followUpStatus: savedStatus,
           hasFutureAppointment,
-          assignedPractitionerId
+          assignedPractitionerId,
+          treatmentNotes,
+          reminderDate
         });
       } catch (err) {
         console.error(`Error processing patient ${patient.id}:`, err);
@@ -206,6 +237,22 @@ export const FollowUpProvider: React.FC<{ children: ReactNode }> = ({ children }
     });
   };
 
+  const remindLater = (patientId: number, days: number) => {
+    // Calculate the future date for the reminder
+    const reminderDate = new Date();
+    reminderDate.setDate(reminderDate.getDate() + days);
+    
+    // Save reminder date to localStorage
+    const reminderDates = JSON.parse(localStorage.getItem('reminder_dates') || '{}');
+    reminderDates[patientId] = reminderDate.toISOString();
+    localStorage.setItem('reminder_dates', JSON.stringify(reminderDates));
+    
+    // Update patients state
+    setPatients(patients.map(p => 
+      p.id === patientId ? { ...p, reminderDate: reminderDate.toISOString() } : p
+    ));
+  };
+
   useEffect(() => {
     loadData();
   }, []);
@@ -221,7 +268,8 @@ export const FollowUpProvider: React.FC<{ children: ReactNode }> = ({ children }
         markAsContacted,
         filterDays,
         setFilterDays,
-        filteredPatients
+        filteredPatients,
+        remindLater
       }}
     >
       {children}

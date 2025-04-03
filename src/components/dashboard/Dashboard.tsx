@@ -18,7 +18,9 @@ import {
   Clock, 
   Filter,
   ChevronDown,
-  BarChart
+  BarChart,
+  ThumbsUp,
+  Bell
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -33,6 +35,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Link } from 'react-router-dom';
+import { Textarea } from '@/components/ui/textarea';
 
 const Dashboard: React.FC = () => {
   const {
@@ -43,7 +46,8 @@ const Dashboard: React.FC = () => {
     dismissPatient,
     markAsContacted,
     filterDays,
-    setFilterDays
+    setFilterDays,
+    remindLater
   } = useFollowUp();
   
   const [searchTerm, setSearchTerm] = useState('');
@@ -51,10 +55,15 @@ const Dashboard: React.FC = () => {
   const [sortBy, setSortBy] = useState<'name' | 'date'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [selectedTab, setSelectedTab] = useState('pending');
+  
+  // Dialogs state
   const [dismissDialogOpen, setDismissDialogOpen] = useState(false);
-  const [currentPatient, setCurrentPatient] = useState<PatientWithFollowUpStatus | null>(null);
   const [smsModalOpen, setSmsModalOpen] = useState(false);
+  const [reminderDialogOpen, setReminderDialogOpen] = useState(false);
+  
+  const [currentPatient, setCurrentPatient] = useState<PatientWithFollowUpStatus | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState('appointment');
+  const [customMessage, setCustomMessage] = useState('');
   const { toast } = useToast();
 
   // Filter patients by search term
@@ -142,6 +151,9 @@ const Dashboard: React.FC = () => {
 
   const handleSendSMS = (patient: PatientWithFollowUpStatus) => {
     setCurrentPatient(patient);
+    // Pre-populate custom message based on treatment notes
+    const treatmentText = patient.treatmentNotes || 'your treatment';
+    setCustomMessage(`Hi ${patient.first_name}, we hope you've been well since ${treatmentText}. Would you like to schedule a follow-up appointment?`);
     setSmsModalOpen(true);
   };
   
@@ -153,7 +165,24 @@ const Dashboard: React.FC = () => {
     
     toast({
       title: "Follow-up SMS sent",
-      description: `${selectedTemplate} template sent to ${currentPatient.first_name} ${currentPatient.last_name}`,
+      description: `Message sent to ${currentPatient.first_name} ${currentPatient.last_name}`,
+    });
+  };
+
+  const handleRemindLater = (patient: PatientWithFollowUpStatus) => {
+    setCurrentPatient(patient);
+    setReminderDialogOpen(true);
+  };
+  
+  const handleConfirmReminder = (days: number) => {
+    if (!currentPatient) return;
+    
+    remindLater(currentPatient.id, days);
+    setReminderDialogOpen(false);
+    
+    toast({
+      title: "Reminder set",
+      description: `You'll be reminded about ${currentPatient.first_name} ${currentPatient.last_name} in ${days} days`,
     });
   };
 
@@ -381,6 +410,7 @@ const Dashboard: React.FC = () => {
                       )}
                       onDismiss={handleDismissRequest}
                       onSendSMS={handleSendSMS}
+                      onRemindLater={handleRemindLater}
                     />
                   ) : null}
                   
@@ -390,6 +420,7 @@ const Dashboard: React.FC = () => {
                     patients={patients}
                     onDismiss={handleDismissRequest}
                     onSendSMS={handleSendSMS}
+                    onRemindLater={handleRemindLater}
                   />
                 </div>
               )}
@@ -404,7 +435,7 @@ const Dashboard: React.FC = () => {
           <DialogHeader>
             <DialogTitle>Dismiss this patient?</DialogTitle>
             <DialogDescription>
-              Would you like to dismiss this patient or send them a review request?
+              Would you like to dismiss this patient or send them a thank you and review request?
             </DialogDescription>
           </DialogHeader>
           
@@ -415,7 +446,8 @@ const Dashboard: React.FC = () => {
                 className="w-full bg-cliniko-primary hover:bg-cliniko-accent"
                 onClick={() => handleConfirmDismiss(true)}
               >
-                Dismiss & Send Review Request
+                <ThumbsUp className="mr-2 h-4 w-4" />
+                Send Thank You & Review Request
               </Button>
               
               <Button
@@ -446,7 +478,7 @@ const Dashboard: React.FC = () => {
           <DialogHeader>
             <DialogTitle>Send Follow-up SMS</DialogTitle>
             <DialogDescription>
-              Select a template to send to {currentPatient?.first_name} {currentPatient?.last_name}
+              Select a template or customize your message for {currentPatient?.first_name} {currentPatient?.last_name}
             </DialogDescription>
           </DialogHeader>
           
@@ -457,7 +489,22 @@ const Dashboard: React.FC = () => {
               </label>
               <Select 
                 value={selectedTemplate} 
-                onValueChange={setSelectedTemplate}
+                onValueChange={(val) => {
+                  setSelectedTemplate(val);
+                  
+                  // Update custom message based on template and patient info
+                  if (currentPatient) {
+                    const treatmentText = currentPatient.treatmentNotes || 'your treatment';
+                    
+                    if (val === 'appointment') {
+                      setCustomMessage(`Hi ${currentPatient.first_name}, we hope you've been well since ${treatmentText}. Would you like to schedule a follow-up appointment?`);
+                    } else if (val === 'checkup') {
+                      setCustomMessage(`Hi ${currentPatient.first_name}, it's been a while since your ${treatmentText}. We recommend scheduling a checkup soon. Please call us to book.`);
+                    } else if (val === 'discount') {
+                      setCustomMessage(`Hi ${currentPatient.first_name}, as a valued patient who received ${treatmentText}, we're offering a special 15% discount for your next appointment!`);
+                    }
+                  }
+                }}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select a template" />
@@ -466,21 +513,28 @@ const Dashboard: React.FC = () => {
                   <SelectItem value="appointment">Book Appointment</SelectItem>
                   <SelectItem value="checkup">Checkup Reminder</SelectItem>
                   <SelectItem value="discount">Special Offer</SelectItem>
+                  <SelectItem value="custom">Custom Message</SelectItem>
                 </SelectContent>
               </Select>
               
-              <div className="mt-4 p-4 bg-gray-50 rounded-md">
-                <p className="text-sm">
-                  {selectedTemplate === 'appointment' && (
-                    <>Hi {currentPatient?.first_name}, we noticed it's been a while since your last visit. Would you like to schedule a new appointment? Click here to book: [link]</>
-                  )}
-                  {selectedTemplate === 'checkup' && (
-                    <>Hi {currentPatient?.first_name}, this is a friendly reminder that it's time for your regular checkup. Please call us at (123) 456-7890 to schedule.</>
-                  )}
-                  {selectedTemplate === 'discount' && (
-                    <>Hi {currentPatient?.first_name}, we're offering a special 15% discount for returning patients this month! Book your appointment now: [link]</>
-                  )}
-                </p>
+              <div className="mt-4">
+                <label htmlFor="customMessage" className="text-sm font-medium">
+                  Message Preview/Edit
+                </label>
+                <Textarea
+                  id="customMessage"
+                  value={customMessage}
+                  onChange={(e) => setCustomMessage(e.target.value)}
+                  className="mt-1"
+                  rows={4}
+                />
+                
+                {currentPatient?.treatmentNotes && (
+                  <div className="mt-2 p-2 bg-gray-50 rounded-md">
+                    <p className="text-xs text-muted-foreground font-medium">Treatment Notes:</p>
+                    <p className="text-sm">{currentPatient.treatmentNotes}</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -500,6 +554,54 @@ const Dashboard: React.FC = () => {
               onClick={handleConfirmSMS}
             >
               Send SMS
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Remind Later Dialog */}
+      <Dialog open={reminderDialogOpen} onOpenChange={setReminderDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Set Follow-up Reminder</DialogTitle>
+            <DialogDescription>
+              When would you like to be reminded about this patient?
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid gap-4 py-4">
+            <div className="flex flex-col space-y-3">
+              <Button 
+                variant="outline"
+                onClick={() => handleConfirmReminder(7)}
+                className="justify-start"
+              >
+                <Bell className="mr-2 h-4 w-4" /> Remind in 7 days
+              </Button>
+              <Button 
+                variant="outline"
+                onClick={() => handleConfirmReminder(14)}
+                className="justify-start"
+              >
+                <Bell className="mr-2 h-4 w-4" /> Remind in 14 days
+              </Button>
+              <Button 
+                variant="outline"
+                onClick={() => handleConfirmReminder(30)}
+                className="justify-start"
+              >
+                <Bell className="mr-2 h-4 w-4" /> Remind in 30 days
+              </Button>
+            </div>
+          </div>
+          
+          <DialogFooter className="sm:justify-start">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setReminderDialogOpen(false)}
+            >
+              Cancel
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -551,6 +653,7 @@ interface PatientGroupProps {
   patients: PatientWithFollowUpStatus[];
   onDismiss: (patient: PatientWithFollowUpStatus) => void;
   onSendSMS: (patient: PatientWithFollowUpStatus) => void;
+  onRemindLater: (patient: PatientWithFollowUpStatus) => void;
 }
 
 const PatientGroup: React.FC<PatientGroupProps> = ({ 
@@ -558,7 +661,8 @@ const PatientGroup: React.FC<PatientGroupProps> = ({
   subtitle, 
   patients, 
   onDismiss,
-  onSendSMS
+  onSendSMS,
+  onRemindLater
 }) => {
   // Only show up to 10 patients and indicate there are more
   const displayPatients = patients.slice(0, 10);
@@ -581,6 +685,7 @@ const PatientGroup: React.FC<PatientGroupProps> = ({
                 patient={patient}
                 onDismiss={onDismiss}
                 onSendSMS={onSendSMS}
+                onRemindLater={onRemindLater}
               />
             ))}
           </div>
@@ -601,9 +706,10 @@ interface PatientCardProps {
   patient: PatientWithFollowUpStatus;
   onDismiss: (patient: PatientWithFollowUpStatus) => void;
   onSendSMS: (patient: PatientWithFollowUpStatus) => void;
+  onRemindLater: (patient: PatientWithFollowUpStatus) => void;
 }
 
-const PatientCard: React.FC<PatientCardProps> = ({ patient, onDismiss, onSendSMS }) => {
+const PatientCard: React.FC<PatientCardProps> = ({ patient, onDismiss, onSendSMS, onRemindLater }) => {
   const lastAppointmentDate = patient.lastAppointmentDate 
     ? format(new Date(patient.lastAppointmentDate), 'MMM d, yyyy')
     : 'Unknown';
@@ -620,48 +726,69 @@ const PatientCard: React.FC<PatientCardProps> = ({ patient, onDismiss, onSendSMS
   }[patient.followUpStatus];
 
   return (
-    <div className={`flex flex-col sm:flex-row justify-between bg-white rounded-lg border-l-4 ${statusColor} shadow-sm hover:shadow-md transition-shadow overflow-hidden`}>
-      <div className="p-3 flex-1">
-        <h3 className="font-medium text-lg">
-          {patient.first_name} {patient.last_name}
-        </h3>
-        <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-sm text-muted-foreground">
-          <span className="flex items-center gap-1">
-            <Calendar size={14} />
-            {lastAppointmentDate}
-          </span>
-          <span className="flex items-center gap-1">
-            <Clock size={14} />
-            {patient.daysSinceLastAppointment || 'N/A'} days ago
-          </span>
-          <span className="flex items-center gap-1">
-            <MessageSquare size={14} />
-            {primaryPhone}
-          </span>
+    <div className={`bg-white rounded-lg border-l-4 ${statusColor} shadow-sm hover:shadow-md transition-shadow overflow-hidden`}>
+      <div className="p-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex-1">
+            <h3 className="font-medium text-lg">
+              {patient.first_name} {patient.last_name}
+            </h3>
+            <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-sm text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <Calendar size={14} />
+                {lastAppointmentDate}
+              </span>
+              <span className="flex items-center gap-1">
+                <Clock size={14} />
+                {patient.daysSinceLastAppointment || 'N/A'} days ago
+              </span>
+              <span className="flex items-center gap-1">
+                <MessageSquare size={14} />
+                {primaryPhone}
+              </span>
+            </div>
+          </div>
+          
+          <div className="flex flex-wrap gap-2 justify-end">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onRemindLater(patient)}
+              className="text-gray-600 hover:text-gray-800"
+            >
+              <Bell size={14} className="mr-1" />
+              <span>Remind Later</span>
+            </Button>
+            
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onDismiss(patient)}
+              className="text-gray-600 hover:text-gray-800"
+            >
+              <Check size={14} className="mr-1" />
+              <span>Dismiss/Thank</span>
+            </Button>
+            
+            <Button
+              variant="default"
+              size="sm"
+              className="bg-cliniko-primary hover:bg-cliniko-accent"
+              disabled={!hasMobile || patient.followUpStatus === 'contacted'}
+              onClick={() => onSendSMS(patient)}
+            >
+              <MessageSquare size={14} className="mr-1" />
+              <span>Send Message</span>
+            </Button>
+          </div>
         </div>
-      </div>
-      
-      <div className="flex sm:flex-col justify-end p-2 bg-gray-50 gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          className="text-gray-600 hover:text-gray-800"
-          onClick={() => onDismiss(patient)}
-        >
-          <Check size={14} className="mr-1" />
-          <span>Dismiss</span>
-        </Button>
         
-        <Button
-          variant="default"
-          size="sm"
-          className="bg-cliniko-primary hover:bg-cliniko-accent"
-          disabled={!hasMobile || patient.followUpStatus === 'contacted'}
-          onClick={() => onSendSMS(patient)}
-        >
-          <MessageSquare size={14} className="mr-1" />
-          <span>SMS</span>
-        </Button>
+        {patient.treatmentNotes && (
+          <div className="mt-3 pt-3 border-t border-gray-100">
+            <p className="text-xs font-medium text-muted-foreground mb-1">TREATMENT NOTES:</p>
+            <p className="text-sm">{patient.treatmentNotes}</p>
+          </div>
+        )}
       </div>
     </div>
   );
