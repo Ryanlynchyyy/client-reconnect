@@ -8,7 +8,10 @@ import {
   MessageCircle, 
   BarChart, 
   ChevronRight,
-  Briefcase
+  Briefcase,
+  ChevronDown,
+  MessageSquare,
+  FileText
 } from 'lucide-react';
 
 interface AppLayoutProps {
@@ -17,6 +20,7 @@ interface AppLayoutProps {
 
 const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const [collapsed, setCollapsed] = useState(false);
+  const [smsExpanded, setSmsExpanded] = useState(false);
   
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-gray-50">
@@ -68,13 +72,76 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             collapsed={collapsed}
             badge="New"
           />
-          <NavItem 
-            to="/sms" 
-            icon={<MessageCircle size={20} />} 
-            label="SMS Templates" 
-            description="Message templates"
-            collapsed={collapsed}
-          />
+          
+          {/* SMS Management Section with Dropdown */}
+          <div className="relative">
+            {!collapsed ? (
+              <>
+                <button
+                  onClick={() => setSmsExpanded(!smsExpanded)}
+                  className={cn(
+                    "flex items-center justify-between w-full px-3 py-2 rounded-md transition-colors hover:bg-gray-100",
+                    (window.location.pathname === '/sms' || window.location.pathname === '/sms/replies') ? 
+                      "bg-cliniko-muted text-cliniko-primary font-medium" : "text-gray-700"
+                  )}
+                >
+                  <div className="flex items-center gap-3">
+                    <MessageCircle size={20} />
+                    <div className="flex flex-col flex-1">
+                      <span>SMS Management</span>
+                      <span className="text-xs text-muted-foreground">Messages & Replies</span>
+                    </div>
+                  </div>
+                  <ChevronDown className={cn(
+                    "h-4 w-4 transition-transform",
+                    smsExpanded ? "rotate-180" : ""
+                  )} />
+                </button>
+                
+                {smsExpanded && (
+                  <div className="ml-8 mt-1 space-y-1">
+                    <NavLink
+                      to="/sms"
+                      className={({ isActive }) => cn(
+                        "flex items-center gap-2 px-3 py-1.5 rounded-md transition-colors text-sm",
+                        "hover:bg-gray-100",
+                        isActive ? "bg-cliniko-muted text-cliniko-primary font-medium" : "text-gray-700"
+                      )}
+                    >
+                      <FileText size={16} />
+                      <span>Templates</span>
+                    </NavLink>
+                    <NavLink
+                      to="/sms/replies"
+                      className={({ isActive }) => cn(
+                        "flex items-center gap-2 px-3 py-1.5 rounded-md transition-colors text-sm",
+                        "hover:bg-gray-100",
+                        isActive ? "bg-cliniko-muted text-cliniko-primary font-medium" : "text-gray-700"
+                      )}
+                    >
+                      <MessageSquare size={16} />
+                      <span>Replies</span>
+                    </NavLink>
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                {/* Collapsed view */}
+                <NavLink
+                  to="/sms"
+                  className={({ isActive }) => cn(
+                    "flex justify-center p-2 rounded-md transition-colors",
+                    "hover:bg-gray-100",
+                    isActive ? "bg-cliniko-muted text-cliniko-primary" : "text-gray-700"
+                  )}
+                >
+                  <MessageCircle size={20} />
+                </NavLink>
+              </>
+            )}
+          </div>
+          
           <NavItem 
             to="/analytics" 
             icon={<BarChart size={20} />} 
