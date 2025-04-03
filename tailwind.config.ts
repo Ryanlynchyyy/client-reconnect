@@ -63,15 +63,23 @@ export default {
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
 				},
-				// Custom colors for our app
+				// Custom colors for Body in Mind Physio
 				cliniko: {
-					primary: '#38bdf8', // bright blue
-					secondary: '#0ea5e9', // deeper blue
-					accent: '#0284c7', // darkest blue
-					muted: '#e0f2fe', // light blue background
+					primary: '#0ea5e9', // ocean blue
+					secondary: '#06b6d4', // teal blue
+					accent: '#0891b2', // deeper blue
+					muted: '#e0f2fe', // light sky blue background
 					success: '#10b981', // green for success states
 					warning: '#f59e0b', // amber for warning states
 					danger: '#ef4444', // red for danger states
+				},
+				beach: {
+					sand: '#FDE1D3',   // soft sand color
+					ocean: '#0ea5e9',  // ocean blue
+					sky: '#93c5fd',    // sky blue
+					coral: '#FEC6A1',  // coral/shell color
+					foam: '#f0fdfa',   // white foam/wave color
+					sunset: '#fb923c', // sunset orange
 				}
 			},
 			borderRadius: {
@@ -99,12 +107,23 @@ export default {
 				'pulse-light': {
 					'0%, 100%': { opacity: '1' },
 					'50%': { opacity: '0.7' },
+				},
+				'wave': {
+					'0%': { transform: 'translateX(0)' },
+					'50%': { transform: 'translateX(-10px)' },
+					'100%': { transform: 'translateX(0)' },
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
 				'accordion-up': 'accordion-up 0.2s ease-out',
-				'pulse-light': 'pulse-light 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+				'pulse-light': 'pulse-light 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+				'wave': 'wave 3s ease-in-out infinite',
+			},
+			backgroundImage: {
+				'beach-gradient': 'linear-gradient(to right, #e0f2fe, #f0fdfa)',
+				'ocean-gradient': 'linear-gradient(to bottom, #0ea5e9, #0891b2)',
+				'sunset-gradient': 'linear-gradient(to right, #f59e0b, #fb923c)',
 			}
 		}
 	},
