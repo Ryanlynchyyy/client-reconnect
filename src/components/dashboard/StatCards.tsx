@@ -31,6 +31,9 @@ const StatCards: React.FC<StatCardsProps> = ({
   cancelledAppointments,
   filterDays
 }) => {
+  // Calculate pending percentage as a number
+  const pendingPercentage = Math.min(100, (groupedPatients.pending.length / Math.max(1, filteredPatients.length)) * 100);
+  
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       <Card className="bg-gradient-to-br from-indigo-50 to-white border-indigo-100 hover:border-indigo-300 transition-colors">
@@ -91,12 +94,12 @@ const StatCards: React.FC<StatCardsProps> = ({
               <div 
                 className="h-full bg-sky-500 rounded-full" 
                 style={{ 
-                  width: `${Math.min(100, (groupedPatients.pending.length / Math.max(1, filteredPatients.length)) * 100).toFixed(0)}%` 
+                  width: `${pendingPercentage}%` 
                 }}
               ></div>
             </div>
             <span className="text-xs font-medium">
-              {Math.min(100, ((groupedPatients.pending.length / Math.max(1, filteredPatients.length)) * 100).toFixed(0))}%
+              {pendingPercentage.toFixed(0)}%
             </span>
           </div>
         </CardFooter>
