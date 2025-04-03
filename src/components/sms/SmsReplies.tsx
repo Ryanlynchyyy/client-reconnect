@@ -5,10 +5,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Search, RefreshCw, MessageCircle, Clock, CheckCircle } from 'lucide-react';
+import { Search, RefreshCw, MessageCircle, Clock, CheckCircle, Calendar } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { Link } from 'react-router-dom';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 
 interface SmsReply {
   id: string;
@@ -68,12 +70,52 @@ const mockReplies: SmsReply[] = [
   }
 ];
 
+// Auto-response generator based on message content
+const generateAutoResponse = (message: string, patientName: string): string => {
+  // Extract key phrases from the message
+  const lowercaseMessage = message.toLowerCase();
+  
+  // Booking related messages
+  if (lowercaseMessage.includes('book') || 
+      lowercaseMessage.includes('schedule') || 
+      lowercaseMessage.includes('appointment') ||
+      lowercaseMessage.includes('next week') || 
+      lowercaseMessage.includes('available')) {
+    
+    return `Hi ${patientName.split(' ')[0]}, thanks for your message. We'd be happy to book you in for an appointment. You can book directly using our online calendar: https://booking.cliniko.com/yourbusiness\n\nAlternatively, let us know your preferred day and time, and we'll arrange it for you.`;
+  }
+  
+  // Rescheduling related messages
+  else if (lowercaseMessage.includes('reschedule') || 
+           lowercaseMessage.includes('change appointment') ||
+           lowercaseMessage.includes('move appointment')) {
+    
+    return `Hi ${patientName.split(' ')[0]}, no problem! You can reschedule your appointment using our online booking system: https://booking.cliniko.com/yourbusiness\n\nOr let us know what day and time works better for you, and we'll adjust your appointment.`;
+  }
+  
+  // Thank you / positive feedback messages
+  else if (lowercaseMessage.includes('thank') || 
+           lowercaseMessage.includes('better') ||
+           lowercaseMessage.includes('good') ||
+           lowercaseMessage.includes('helped')) {
+    
+    return `Hi ${patientName.split(' ')[0]}, we're glad to hear that! Thank you for the update. If you'd like to book a follow-up session, you can do so here: https://booking.cliniko.com/yourbusiness\n\nOtherwise, please don't hesitate to reach out if you need anything else.`;
+  }
+  
+  // Default response
+  return `Hi ${patientName.split(' ')[0]}, thanks for your message. We'll get back to you shortly. If you'd like to book an appointment, you can do so directly here: https://booking.cliniko.com/yourbusiness`;
+};
+
 const SmsReplies: React.FC = () => {
   const { toast } = useToast();
   const [replies, setReplies] = useState<SmsReply[]>(mockReplies);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTab, setSelectedTab] = useState<string>("all");
-  
+  const [responseDialogOpen, setResponseDialogOpen] = useState(false);
+  const [currentReply, setCurrentReply] = useState<SmsReply | null>(null);
+  const [responseText, setResponseText] = useState('');
+  const [includeBookingLink, setIncludeBookingLink] = useState(true);
+
   const filteredReplies = replies.filter(reply => {
     const matchesSearch = !searchTerm || 
       reply.patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -106,18 +148,42 @@ const SmsReplies: React.FC = () => {
     });
   };
 
-  const handleRespond = (replyId: string, patientName: string) => {
-    // In a real app, this would open a compose message dialog
+  const openResponseDialog = (reply: SmsReply) => {
+    setCurrentReply(reply);
+    // Generate auto-response based on message content
+    const autoResponse = generateAutoResponse(reply.message, reply.patientName);
+    setResponseText(autoResponse);
+    setResponseDialogOpen(true);
+    
+    // Mark as read when opening response dialog
+    if (reply.status === 'new') {
+      handleMarkAsRead(reply.id);
+    }
+  };
+
+  const handleSendResponse = () => {
+    if (!currentReply) return;
+
+    // In a real app, this would send the message through an SMS API
     setReplies(prev => 
       prev.map(reply => 
-        reply.id === replyId ? { ...reply, status: 'responded' } : reply
+        reply.id === currentReply.id ? { ...reply, status: 'responded' } : reply
       )
     );
     
     toast({
       title: "Response sent",
-      description: `Your response to ${patientName} has been sent.`,
+      description: `Your response to ${currentReply.patientName} has been sent.`,
     });
+    
+    setResponseDialogOpen(false);
+    setCurrentReply(null);
+  };
+
+  const handleAddBookingLink = () => {
+    if (includeBookingLink) {
+      setResponseText(prev => prev + "\n\nBook online: https://booking.cliniko.com/yourbusiness");
+    }
   };
 
   const getStatusCount = (status: string) => {
@@ -277,9 +343,10 @@ const SmsReplies: React.FC = () => {
                             {reply.status !== 'responded' && (
                               <Button 
                                 size="sm"
-                                onClick={() => handleRespond(reply.id, reply.patientName)}
+                                onClick={() => openResponseDialog(reply)}
+                                className="flex items-center gap-2"
                               >
-                                Respond
+                                <span>Auto-respond</span>
                               </Button>
                             )}
                           </div>
@@ -297,6 +364,62 @@ const SmsReplies: React.FC = () => {
           </Tabs>
         </CardContent>
       </Card>
+
+      {/* Response Dialog */}
+      <Dialog open={responseDialogOpen} onOpenChange={setResponseDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Auto-generated Response</DialogTitle>
+            <DialogDescription>
+              Review and edit the auto-generated response for {currentReply?.patientName}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-4">
+            <div className="rounded-md bg-gray-50 p-4 text-sm mb-2">
+              <div className="font-medium mb-1">Original message:</div>
+              <div className="text-muted-foreground">{currentReply?.message}</div>
+            </div>
+
+            <Textarea 
+              value={responseText} 
+              onChange={(e) => setResponseText(e.target.value)} 
+              rows={6}
+              className="resize-none"
+              placeholder="Your response"
+            />
+
+            <div className="flex items-center space-x-2">
+              <Button 
+                type="button" 
+                size="sm" 
+                variant="outline"
+                className="flex items-center gap-2"
+                onClick={() => {
+                  setIncludeBookingLink(prev => !prev);
+                  handleAddBookingLink();
+                }}
+              >
+                <Calendar className="h-4 w-4" />
+                <span>Include Booking Link</span>
+              </Button>
+            </div>
+          </div>
+
+          <DialogFooter className="sm:justify-end">
+            <Button 
+              type="button" 
+              variant="outline"
+              onClick={() => setResponseDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleSendResponse} type="submit">
+              Send Response
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Card>
         <CardHeader>
