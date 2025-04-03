@@ -13,7 +13,7 @@ import {
   MessageSquare,
   Menu,
   LogOut,
-  Wave,
+  Waves,
   SunMedium,
   Umbrella
 } from 'lucide-react';

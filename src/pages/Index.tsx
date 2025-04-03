@@ -1,10 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/layout/AppLayout';
 import Dashboard from '@/components/dashboard/Dashboard';
 import { FollowUpProvider } from '@/contexts/FollowUpContext';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { InfoIcon, ArrowUpRight, Wave, SunMedium } from 'lucide-react';
+import { InfoIcon, ArrowUpRight, Waves, SunMedium } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 
@@ -12,12 +11,10 @@ const Index = () => {
   const [isExampleData, setIsExampleData] = useState(true);
   const [greeting, setGreeting] = useState('');
   
-  // Check if the user has an API key set
   useEffect(() => {
     const hasApiKey = !!localStorage.getItem('cliniko_api_key');
     setIsExampleData(!hasApiKey);
     
-    // Set greeting based on time of day
     const hour = new Date().getHours();
     if (hour < 12) {
       setGreeting('Good morning');
@@ -73,7 +70,7 @@ const Index = () => {
           
           <div className="bg-white bg-opacity-80 backdrop-blur-sm p-4 rounded-lg border border-beach-sand shadow-sm">
             <h2 className="text-lg font-medium text-beach-ocean mb-3 flex items-center">
-              <Wave className="w-5 h-5 mr-2 text-beach-coral" />
+              <Waves className="w-5 h-5 mr-2 text-beach-coral" />
               Body in Mind Follow-Up System
             </h2>
             <p className="text-sm text-gray-600 mb-4">
