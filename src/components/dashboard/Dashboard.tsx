@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+
+import React, { useState, useMemo, useEffect } from 'react';
 import { useFollowUp } from '@/contexts/FollowUpContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -19,9 +20,13 @@ import {
   ChevronDown,
   BarChart,
   ThumbsUp,
-  Bell
+  Bell,
+  CalendarX2,
+  UserX,
+  ListFilter,
+  CalendarCheck
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, subWeeks, subDays, isWithinInterval, startOfDay } from 'date-fns';
 import { cn } from '@/lib/utils';
 import {
   Dialog,
@@ -35,8 +40,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { Link } from 'react-router-dom';
 import { Textarea } from '@/components/ui/textarea';
+import { AppointmentList } from '../cancelled-appointments/AppointmentList';
 
-const Dashboard: React.FC = () => {
+interface DashboardProps {
+  includeGapDetection?: boolean;
+}
+
+const Dashboard: React.FC<DashboardProps> = ({ includeGapDetection = false }) => {
   const {
     filteredPatients,
     isLoading,
@@ -57,6 +67,9 @@ const Dashboard: React.FC = () => {
   const [sortBy, setSortBy] = useState<'name' | 'date'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [selectedTab, setSelectedTab] = useState('pending');
+  const [timeRange, setTimeRange] = useState<'all' | '2-weeks' | 'this-week' | 'today'>('all');
+  const [appointmentCountFilter, setAppointmentCountFilter] = useState<'all' | '1-2'>('all');
+  const [appointmentStatusFilter, setAppointmentStatusFilter] = useState<'all' | 'cancelled' | 'no-show'>('all');
   
   const [dismissDialogOpen, setDismissDialogOpen] = useState(false);
   const [smsModalOpen, setSmsModalOpen] = useState(false);
@@ -66,6 +79,75 @@ const Dashboard: React.FC = () => {
   const [selectedTemplate, setSelectedTemplate] = useState('appointment');
   const [customMessage, setCustomMessage] = useState('');
   const { toast } = useToast();
+
+  // Mock cancelled appointments data for demo
+  const [cancelledAppointments, setCancelledAppointments] = useState([
+    {
+      id: 1,
+      patientId: 101,
+      patientName: "John Smith",
+      lastAppointmentDate: new Date().toISOString(),
+      gapDays: 5,
+      status: "cancelled",
+      appointmentType: "Standard consultation",
+      phone: "0412 345 678",
+      email: "john@example.com",
+      practitionerId: 1,
+      practitionerName: "Ben Smith"
+    },
+    {
+      id: 2,
+      patientId: 102,
+      patientName: "Sarah Johnson",
+      lastAppointmentDate: subDays(new Date(), 3).toISOString(),
+      gapDays: 18,
+      status: "missed",
+      appointmentType: "Follow-up session",
+      phone: "0423 456 789",
+      email: "sarah@example.com",
+      practitionerId: 2,
+      practitionerName: "Josh Adams"
+    },
+    {
+      id: 3,
+      patientId: 103,
+      patientName: "Michael Brown",
+      lastAppointmentDate: subDays(new Date(), 14).toISOString(),
+      gapDays: 14,
+      status: "cancelled",
+      appointmentType: "Initial assessment",
+      phone: "0434 567 890",
+      email: "michael@example.com",
+      practitionerId: 1,
+      practitionerName: "Ben Smith"
+    },
+    {
+      id: 4,
+      patientId: 104,
+      patientName: "Lisa Williams",
+      lastAppointmentDate: subDays(new Date(), 21).toISOString(),
+      gapDays: 21,
+      status: "missed",
+      appointmentType: "Therapeutic session",
+      phone: "0445 678 901",
+      email: "lisa@example.com",
+      practitionerId: 2,
+      practitionerName: "Josh Adams"
+    },
+    {
+      id: 5,
+      patientId: 105,
+      patientName: "David Jones",
+      lastAppointmentDate: subDays(new Date(), 7).toISOString(),
+      gapDays: 7,
+      status: "large-gap",
+      appointmentType: "Physiotherapy",
+      phone: "0456 789 012",
+      email: "david@example.com",
+      practitionerId: 1, 
+      practitionerName: "Ben Smith"
+    }
+  ]);
 
   const searchResults = useMemo(() => {
     if (!searchTerm) return filteredPatients;
@@ -78,8 +160,67 @@ const Dashboard: React.FC = () => {
     );
   }, [filteredPatients, searchTerm]);
 
+  // Apply time range filter
+  const timeFilteredPatients = useMemo(() => {
+    if (timeRange === 'all') return searchResults;
+    
+    const now = new Date();
+    
+    return searchResults.filter(patient => {
+      if (!patient.lastAppointmentDate) return false;
+      const lastVisit = new Date(patient.lastAppointmentDate);
+      
+      if (timeRange === '2-weeks') {
+        return isWithinInterval(lastVisit, {
+          start: subWeeks(now, 2),
+          end: now
+        });
+      } else if (timeRange === 'this-week') {
+        return isWithinInterval(lastVisit, {
+          start: subDays(now, 7),
+          end: now
+        });
+      } else if (timeRange === 'today') {
+        return isWithinInterval(lastVisit, {
+          start: startOfDay(now),
+          end: now
+        });
+      }
+      
+      return true;
+    });
+  }, [searchResults, timeRange]);
+
+  // Apply appointment count filter
+  const countFilteredPatients = useMemo(() => {
+    if (appointmentCountFilter === 'all') return timeFilteredPatients;
+    
+    // In a real implementation, we would check the actual appointment count
+    // For demo purposes, we'll just use a random subset
+    if (appointmentCountFilter === '1-2') {
+      return timeFilteredPatients.filter(p => p.id % 3 !== 0); // Simple mock filter
+    }
+    
+    return timeFilteredPatients;
+  }, [timeFilteredPatients, appointmentCountFilter]);
+  
+  // Apply appointment status filter
+  const statusFilteredPatients = useMemo(() => {
+    if (appointmentStatusFilter === 'all') return countFilteredPatients;
+    
+    // In a real implementation, we would check the actual appointment status
+    // For demo purposes, we'll filter based on patient ID
+    if (appointmentStatusFilter === 'cancelled') {
+      return countFilteredPatients.filter(p => p.id % 2 === 0); // Simple mock filter
+    } else if (appointmentStatusFilter === 'no-show') {
+      return countFilteredPatients.filter(p => p.id % 3 === 0); // Simple mock filter
+    }
+    
+    return countFilteredPatients;
+  }, [countFilteredPatients, appointmentStatusFilter]);
+
   const sortedPatients = useMemo(() => {
-    return [...searchResults].sort((a, b) => {
+    return [...statusFilteredPatients].sort((a, b) => {
       if (selectedPractitionerId) {
         const aHasPractitioner = a.assignedPractitionerId === selectedPractitionerId;
         const bHasPractitioner = b.assignedPractitionerId === selectedPractitionerId;
@@ -98,7 +239,7 @@ const Dashboard: React.FC = () => {
         return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
       }
     });
-  }, [searchResults, sortBy, sortOrder, selectedPractitionerId]);
+  }, [statusFilteredPatients, sortBy, sortOrder, selectedPractitionerId]);
 
   const groupedPatients = useMemo(() => {
     return {
@@ -169,6 +310,13 @@ const Dashboard: React.FC = () => {
     toast({
       title: "Follow-up SMS sent",
       description: `Message sent to ${currentPatient.first_name} ${currentPatient.last_name}`,
+    });
+  };
+
+  const handleSendMessageToGapPatient = (patientId: number, patientName: string) => {
+    toast({
+      title: "SMS scheduled",
+      description: `Follow-up message will be sent to ${patientName}`,
     });
   };
 
@@ -285,6 +433,24 @@ const Dashboard: React.FC = () => {
                   {practitioners.find(p => p.id === selectedPractitionerId)?.first_name || 'Practitioner'} ×
                 </Badge>
               )}
+
+              {timeRange !== 'all' && (
+                <Badge variant="outline" className="bg-purple-50 text-purple-800 border-purple-300 cursor-pointer" onClick={() => setTimeRange('all')}>
+                  {timeRange === '2-weeks' ? '2+ weeks' : timeRange === 'this-week' ? 'This week' : 'Today'} ×
+                </Badge>
+              )}
+              
+              {appointmentCountFilter !== 'all' && (
+                <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-300 cursor-pointer" onClick={() => setAppointmentCountFilter('all')}>
+                  1-2 appointments ×
+                </Badge>
+              )}
+              
+              {appointmentStatusFilter !== 'all' && (
+                <Badge variant="outline" className="bg-red-50 text-red-800 border-red-300 cursor-pointer" onClick={() => setAppointmentStatusFilter('all')}>
+                  {appointmentStatusFilter === 'cancelled' ? 'Cancelled' : 'No Show'} ×
+                </Badge>
+              )}
               
               {isFilterOpen && (
                 <div className="w-full mt-2 bg-gray-50 p-3 rounded-md grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -344,14 +510,14 @@ const Dashboard: React.FC = () => {
                   <div>
                     <p className="text-sm font-medium mb-2">Practitioner</p>
                     <Select 
-                      value={selectedPractitionerId?.toString() || ""}
-                      onValueChange={(value) => setSelectedPractitionerId(value ? parseInt(value) : null)}
+                      value={selectedPractitionerId?.toString() || "all"}
+                      onValueChange={(value) => setSelectedPractitionerId(value === "all" ? null : parseInt(value))}
                     >
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="All practitioners" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">All Practitioners</SelectItem>
+                        <SelectItem value="all">All Practitioners</SelectItem>
                         {practitioners.map(practitioner => (
                           <SelectItem key={practitioner.id} value={practitioner.id.toString()}>
                             {practitioner.first_name} {practitioner.last_name}
@@ -359,6 +525,98 @@ const Dashboard: React.FC = () => {
                         ))}
                       </SelectContent>
                     </Select>
+                  </div>
+
+                  <div>
+                    <p className="text-sm font-medium mb-2">Time Period</p>
+                    <div className="flex flex-wrap gap-1">
+                      <Button 
+                        variant={timeRange === 'all' ? "default" : "outline"}
+                        onClick={() => setTimeRange('all')}
+                        size="sm"
+                        className="flex-1"
+                      >
+                        All Time
+                      </Button>
+                      <Button 
+                        variant={timeRange === '2-weeks' ? "default" : "outline"}
+                        onClick={() => setTimeRange('2-weeks')}
+                        size="sm"
+                        className="flex-1"
+                      >
+                        2+ Weeks
+                      </Button>
+                      <Button 
+                        variant={timeRange === 'this-week' ? "default" : "outline"}
+                        onClick={() => setTimeRange('this-week')}
+                        size="sm"
+                        className="flex-1"
+                      >
+                        This Week
+                      </Button>
+                      <Button 
+                        variant={timeRange === 'today' ? "default" : "outline"}
+                        onClick={() => setTimeRange('today')}
+                        size="sm"
+                        className="flex-1"
+                      >
+                        Today
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <p className="text-sm font-medium mb-2">Appointment Count</p>
+                    <div className="flex space-x-1">
+                      <Button 
+                        variant={appointmentCountFilter === 'all' ? "default" : "outline"}
+                        onClick={() => setAppointmentCountFilter('all')}
+                        size="sm"
+                        className="flex-1"
+                      >
+                        All
+                      </Button>
+                      <Button 
+                        variant={appointmentCountFilter === '1-2' ? "default" : "outline"}
+                        onClick={() => setAppointmentCountFilter('1-2')}
+                        size="sm"
+                        className="flex-1"
+                      >
+                        1-2 Visits
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <p className="text-sm font-medium mb-2">Appointment Status</p>
+                    <div className="flex space-x-1">
+                      <Button 
+                        variant={appointmentStatusFilter === 'all' ? "default" : "outline"}
+                        onClick={() => setAppointmentStatusFilter('all')}
+                        size="sm"
+                        className="flex-1"
+                      >
+                        All
+                      </Button>
+                      <Button 
+                        variant={appointmentStatusFilter === 'cancelled' ? "default" : "outline"}
+                        onClick={() => setAppointmentStatusFilter('cancelled')}
+                        size="sm"
+                        className="flex-1"
+                      >
+                        <CalendarX2 className="mr-1 h-3 w-3" /> 
+                        Cancelled
+                      </Button>
+                      <Button 
+                        variant={appointmentStatusFilter === 'no-show' ? "default" : "outline"}
+                        onClick={() => setAppointmentStatusFilter('no-show')}
+                        size="sm"
+                        className="flex-1"
+                      >
+                        <UserX className="mr-1 h-3 w-3" />
+                        No Show
+                      </Button>
+                    </div>
                   </div>
                 </div>
               )}
@@ -384,6 +642,20 @@ const Dashboard: React.FC = () => {
                 <StatusBadge count={rangePatients['90+'].length} label="90+ days" color="bg-red-50 text-red-800" />
               </div>
             </div>
+            
+            <div className="mt-3 pt-3 border-t">
+              <div className="grid grid-cols-3 gap-2 text-center">
+                <StatusBadge count={cancelledAppointments.filter(a => a.status === "cancelled").length} 
+                  label="Cancelled" color="bg-orange-50 text-orange-800" />
+                <StatusBadge count={cancelledAppointments.filter(a => a.status === "missed").length} 
+                  label="No Show" color="bg-red-50 text-red-800" />
+                <StatusBadge 
+                  count={appointmentCountFilter === '1-2' ? groupedPatients.all.filter(p => p.id % 3 !== 0).length : 0} 
+                  label="1-2 Visits" 
+                  color="bg-purple-50 text-purple-800" 
+                />
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -391,59 +663,156 @@ const Dashboard: React.FC = () => {
       {isLoading ? (
         <LoadingSkeleton />
       ) : (
-        <Tabs value={selectedTab} onValueChange={setSelectedTab}>
+        <Tabs 
+          defaultValue={includeGapDetection ? "follow-ups" : "pending"} 
+          className="w-full"
+        >
           <TabsList className="mb-4">
+            {includeGapDetection && (
+              <TabsTrigger value="follow-ups" className="flex items-center gap-2">
+                <ListFilter size={14} />
+                All Follow-Ups
+              </TabsTrigger>
+            )}
             <TabsTrigger value="pending" className="flex items-center gap-2">
+              <Calendar size={14} />
               Pending
               <Badge className="bg-blue-500 text-white ml-1">{groupedPatients.pending.length}</Badge>
             </TabsTrigger>
             <TabsTrigger value="contacted" className="flex items-center gap-2">
+              <MessageSquare size={14} />
               Contacted
               <Badge className="bg-amber-500 text-white ml-1">{groupedPatients.contacted.length}</Badge>
             </TabsTrigger>
+            <TabsTrigger value="cancelled" className="flex items-center gap-2">
+              <CalendarX2 size={14} />
+              Cancelled
+              <Badge className="bg-orange-500 text-white ml-1">{cancelledAppointments.filter(a => a.status === "cancelled").length}</Badge>
+            </TabsTrigger>
+            <TabsTrigger value="no-show" className="flex items-center gap-2">
+              <UserX size={14} />
+              No-Show
+              <Badge className="bg-red-500 text-white ml-1">{cancelledAppointments.filter(a => a.status === "missed").length}</Badge>
+            </TabsTrigger>
             <TabsTrigger value="dismissed" className="flex items-center gap-2">
+              <Check size={14} />
               Dismissed
               <Badge className="bg-gray-500 text-white ml-1">{groupedPatients.dismissed.length}</Badge>
             </TabsTrigger>
-            <TabsTrigger value="all" className="flex items-center gap-2">
-              All
-              <Badge className="bg-gray-200 text-gray-700 ml-1">{groupedPatients.all.length}</Badge>
-            </TabsTrigger>
           </TabsList>
 
+          {includeGapDetection && (
+            <TabsContent value="follow-ups" className="space-y-4">
+              <DashboardSection 
+                title="Weekly Follow-Ups"
+                subtitle="Patients who haven't returned in 2+ weeks"
+                patients={sortedPatients.filter(p => p.daysSinceLastAppointment && p.daysSinceLastAppointment >= 14)}
+                icon={<CalendarCheck className="h-5 w-5 text-blue-600" />}
+                accent="blue"
+                onDismiss={handleDismissRequest}
+                onSendSMS={handleSendSMS}
+                onRemindLater={handleRemindLater}
+                getPractitionerColor={getPractitionerColor}
+              />
+              
+              <DashboardSection 
+                title="New Patients (1-2 Visits Only)"
+                subtitle="Patients who had only 1-2 appointments and stopped"
+                patients={sortedPatients.filter(p => p.id % 3 !== 0).slice(0, 6)} // Mock filter for demo
+                icon={<UserX className="h-5 w-5 text-purple-600" />}
+                accent="purple"
+                onDismiss={handleDismissRequest}
+                onSendSMS={handleSendSMS}
+                onRemindLater={handleRemindLater}
+                getPractitionerColor={getPractitionerColor}
+              />
+              
+              <DashboardSection 
+                title="Cancellations & No-Shows"
+                subtitle="Patients who cancelled or missed their appointments"
+                patients={sortedPatients.filter(p => p.id % 2 === 0).slice(0, 6)} // Mock filter for demo
+                icon={<CalendarX2 className="h-5 w-5 text-red-600" />}
+                accent="red"
+                onDismiss={handleDismissRequest}
+                onSendSMS={handleSendSMS}
+                onRemindLater={handleRemindLater}
+                getPractitionerColor={getPractitionerColor}
+              />
+            </TabsContent>
+          )}
+
+          {/* Standard patient tabs */}
           {Object.entries(groupedPatients).map(([status, patients]) => (
-            <TabsContent key={status} value={status} className="space-y-4">
-              {patients.length === 0 ? (
-                <EmptyState />
-              ) : (
-                <div className="grid grid-cols-1 gap-4">
-                  {status === 'all' || status === 'pending' ? (
+            status !== 'all' && (
+              <TabsContent key={status} value={status} className="space-y-4">
+                {patients.length === 0 ? (
+                  <EmptyState />
+                ) : (
+                  <div className="grid grid-cols-1 gap-4">
+                    {status === 'pending' && (
+                      <PatientGroup 
+                        title="Priority Follow-Ups"
+                        subtitle="Patients who need immediate attention"
+                        patients={patients.filter(p => 
+                          p.daysSinceLastAppointment && p.daysSinceLastAppointment > 90
+                        )}
+                        onDismiss={handleDismissRequest}
+                        onSendSMS={handleSendSMS}
+                        onRemindLater={handleRemindLater}
+                        getPractitionerColor={getPractitionerColor}
+                      />
+                    )}
+                    
                     <PatientGroup 
-                      title="Priority Follow-Ups"
-                      subtitle="Patients who need immediate attention"
-                      patients={patients.filter(p => 
-                        p.daysSinceLastAppointment && p.daysSinceLastAppointment > 90
-                      )}
+                      title="Patient List"
+                      subtitle={`${patients.length} patient${patients.length !== 1 ? 's' : ''} in this category`}
+                      patients={patients}
                       onDismiss={handleDismissRequest}
                       onSendSMS={handleSendSMS}
                       onRemindLater={handleRemindLater}
                       getPractitionerColor={getPractitionerColor}
                     />
-                  ) : null}
-                  
-                  <PatientGroup 
-                    title="Patient List"
-                    subtitle={`${patients.length} patient${patients.length !== 1 ? 's' : ''} in this category`}
-                    patients={patients}
-                    onDismiss={handleDismissRequest}
-                    onSendSMS={handleSendSMS}
-                    onRemindLater={handleRemindLater}
-                    getPractitionerColor={getPractitionerColor}
-                  />
-                </div>
-              )}
-            </TabsContent>
+                  </div>
+                )}
+              </TabsContent>
+            )
           ))}
+          
+          {/* Cancelled appointments tab */}
+          <TabsContent value="cancelled" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Cancelled Appointments</CardTitle>
+                <CardDescription>
+                  Patients who cancelled their appointments and may need follow-up
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <AppointmentList 
+                  gaps={cancelledAppointments.filter(a => a.status === "cancelled")} 
+                  onSendMessage={handleSendMessageToGapPatient} 
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          {/* No-show appointments tab */}
+          <TabsContent value="no-show" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Missed Appointments</CardTitle>
+                <CardDescription>
+                  Patients who did not show up for their appointments
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <AppointmentList 
+                  gaps={cancelledAppointments.filter(a => a.status === "missed")} 
+                  onSendMessage={handleSendMessageToGapPatient} 
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
         </Tabs>
       )}
       
@@ -621,6 +990,81 @@ const Dashboard: React.FC = () => {
         </DialogContent>
       </Dialog>
     </div>
+  );
+};
+
+// New component for color-coded dashboard sections
+interface DashboardSectionProps {
+  title: string;
+  subtitle: string;
+  patients: PatientWithFollowUpStatus[];
+  icon: React.ReactNode;
+  accent: 'blue' | 'purple' | 'red' | 'green' | 'amber';
+  onDismiss: (patient: PatientWithFollowUpStatus) => void;
+  onSendSMS: (patient: PatientWithFollowUpStatus) => void;
+  onRemindLater: (patient: PatientWithFollowUpStatus) => void;
+  getPractitionerColor: (practitionerId?: number) => string;
+}
+
+const DashboardSection: React.FC<DashboardSectionProps> = ({
+  title,
+  subtitle,
+  patients,
+  icon,
+  accent,
+  onDismiss,
+  onSendSMS,
+  onRemindLater,
+  getPractitionerColor
+}) => {
+  const accentColors = {
+    'blue': 'border-l-4 border-blue-500',
+    'purple': 'border-l-4 border-purple-500',
+    'red': 'border-l-4 border-red-500',
+    'green': 'border-l-4 border-green-500',
+    'amber': 'border-l-4 border-amber-500',
+  };
+  
+  if (patients.length === 0) return null;
+  
+  return (
+    <Card className={accentColors[accent]}>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            {icon}
+            <div>
+              <CardTitle className="text-xl">{title}</CardTitle>
+              <CardDescription>{subtitle}</CardDescription>
+            </div>
+          </div>
+          <Badge className={`bg-${accent}-100 text-${accent}-800 border-${accent}-300`}>
+            {patients.length} patients
+          </Badge>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-3">
+          {patients.slice(0, 5).map(patient => (
+            <PatientCard 
+              key={patient.id} 
+              patient={patient}
+              onDismiss={onDismiss}
+              onSendSMS={onSendSMS}
+              onRemindLater={onRemindLater}
+              getPractitionerColor={getPractitionerColor}
+            />
+          ))}
+        </div>
+        {patients.length > 5 && (
+          <div className="mt-3 text-center">
+            <Button variant="ghost" size="sm">
+              View {patients.length - 5} more patients
+            </Button>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 };
 
