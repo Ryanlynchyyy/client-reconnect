@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -72,6 +71,9 @@ const mockReplies: SmsReply[] = [
 
 // Auto-response generator based on message content
 const generateAutoResponse = (message: string, patientName: string): string => {
+  // Extract first name for a more personal touch
+  const firstName = patientName.split(' ')[0];
+  
   // Extract key phrases from the message
   const lowercaseMessage = message.toLowerCase();
   
@@ -82,7 +84,7 @@ const generateAutoResponse = (message: string, patientName: string): string => {
       lowercaseMessage.includes('next week') || 
       lowercaseMessage.includes('available')) {
     
-    return `Hi ${patientName.split(' ')[0]}, thanks for your message. We'd be happy to book you in for an appointment. You can book directly using our online calendar: https://booking.cliniko.com/yourbusiness\n\nAlternatively, let us know your preferred day and time, and we'll arrange it for you.`;
+    return `Hey ${firstName}! Thanks for reaching out 👋 Absolutely, we can get you booked in! You can jump on our online booking page here: https://booking.cliniko.com/yourbusiness\n\nOr if you prefer, just let me know what days/times work best for you, and I'll sort it out. Looking forward to seeing you soon!`;
   }
   
   // Rescheduling related messages
@@ -90,7 +92,7 @@ const generateAutoResponse = (message: string, patientName: string): string => {
            lowercaseMessage.includes('change appointment') ||
            lowercaseMessage.includes('move appointment')) {
     
-    return `Hi ${patientName.split(' ')[0]}, no problem! You can reschedule your appointment using our online booking system: https://booking.cliniko.com/yourbusiness\n\nOr let us know what day and time works better for you, and we'll adjust your appointment.`;
+    return `Hey ${firstName}! No worries at all about rescheduling - life happens! 😊 You can easily switch your appointment time through our booking page: https://booking.cliniko.com/yourbusiness\n\nOr just shoot me a couple of times that work better for you, and I'll get that sorted for you. Easy as!`;
   }
   
   // Thank you / positive feedback messages
@@ -99,11 +101,28 @@ const generateAutoResponse = (message: string, patientName: string): string => {
            lowercaseMessage.includes('good') ||
            lowercaseMessage.includes('helped')) {
     
-    return `Hi ${patientName.split(' ')[0]}, we're glad to hear that! Thank you for the update. If you'd like to book a follow-up session, you can do so here: https://booking.cliniko.com/yourbusiness\n\nOtherwise, please don't hesitate to reach out if you need anything else.`;
+    return `Hey ${firstName}! That's awesome to hear! 🎉 Really stoked that you're feeling better. That's what it's all about! If you ever need another session, our booking page is here: https://booking.cliniko.com/yourbusiness\n\nBut no pressure - just keep doing those exercises we chatted about, and give me a shout if anything changes. You're crushing it!`;
+  }
+  
+  // Pain or symptoms persisting
+  else if (lowercaseMessage.includes('pain') || 
+           lowercaseMessage.includes('hurt') ||
+           lowercaseMessage.includes('sore') ||
+           lowercaseMessage.includes('worse')) {
+    
+    return `Hey ${firstName}, sorry to hear you're still having some trouble! That's definitely not what we want 😕 Let's get you back in ASAP so I can take another look. You can book directly here: https://booking.cliniko.com/yourbusiness\n\nIn the meantime, try some gentle movement and the ice/heat we discussed. Hang in there - we'll get this sorted together!`;
+  }
+  
+  // Questions about exercises
+  else if (lowercaseMessage.includes('exercise') || 
+           lowercaseMessage.includes('stretch') ||
+           lowercaseMessage.includes('movement')) {
+    
+    return `Hey ${firstName}! Great question about the exercises! 💪 Happy to clarify - keep focusing on form rather than reps, and remember it shouldn't increase your pain. If you want me to check your technique, feel free to book a quick follow-up: https://booking.cliniko.com/yourbusiness\n\nKeep it up - consistency is key with these ones!`;
   }
   
   // Default response
-  return `Hi ${patientName.split(' ')[0]}, thanks for your message. We'll get back to you shortly. If you'd like to book an appointment, you can do so directly here: https://booking.cliniko.com/yourbusiness`;
+  return `Hey ${firstName}! Thanks for your message! 😊 I'll get back to you properly soon, but if you're looking to book in, you can save time by using our online booking: https://booking.cliniko.com/yourbusiness\n\nLet me know if you need anything specific in the meantime - I'm here to help!`;
 };
 
 const SmsReplies: React.FC = () => {
