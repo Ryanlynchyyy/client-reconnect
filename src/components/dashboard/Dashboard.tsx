@@ -11,6 +11,7 @@ import DashboardSearch from './DashboardSearch';
 import DashboardFilters from './DashboardFilters';
 import StatCards from './StatCards';
 import ReminderDialog from './ReminderDialog';
+import RebookingTrackerDashboard from './RebookingTrackerDashboard';
 
 interface DashboardProps {
   includeGapDetection?: boolean;
@@ -342,6 +343,8 @@ const Dashboard: React.FC<DashboardProps> = ({ includeGapDetection = false }) =>
           </CardContent>
         </Card>
       )}
+      
+      <RebookingTrackerDashboard practitioners={practitioners} />
       
       <Card className="shadow-sm">
         <CardHeader className="pb-0">
