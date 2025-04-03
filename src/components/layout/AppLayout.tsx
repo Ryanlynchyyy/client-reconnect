@@ -2,7 +2,7 @@
 import React, { ReactNode } from 'react';
 import { NavLink } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { LayoutDashboard, Users, Settings, MessageCircle } from 'lucide-react';
+import { LayoutDashboard, Users, Settings, MessageCircle, BarChart } from 'lucide-react';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -24,6 +24,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           <NavItem to="/" icon={<LayoutDashboard size={20} />} label="Dashboard" />
           <NavItem to="/patients" icon={<Users size={20} />} label="Patients" />
           <NavItem to="/sms" icon={<MessageCircle size={20} />} label="SMS Templates" />
+          <NavItem to="/analytics" icon={<BarChart size={20} />} label="Analytics" />
           <NavItem to="/settings" icon={<Settings size={20} />} label="Settings" />
         </nav>
         
