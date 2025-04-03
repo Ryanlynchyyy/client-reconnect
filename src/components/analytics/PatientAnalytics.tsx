@@ -1,4 +1,3 @@
-
 import React, { useMemo } from 'react';
 import { useFollowUp } from '@/contexts/FollowUpContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -86,6 +85,34 @@ const PatientAnalytics: React.FC = () => {
     { name: 'Left Review', rate: 15, color: '#3b82f6' },
     { name: 'No Response', rate: 47, color: '#6b7280' },
   ];
+  
+  // Create proper chart config objects that follow the required type structure
+  const statusChartConfig = {
+    pending: { color: '#3b82f6', label: 'Pending' },
+    contacted: { color: '#f59e0b', label: 'Contacted' },
+    dismissed: { color: '#6b7280', label: 'Dismissed' },
+    futureAppt: { color: '#10b981', label: 'Future Appt' },
+  };
+  
+  const daysSinceChartConfig = {
+    '0-30': { color: '#10b981', label: '0-30 days' },
+    '30-60': { color: '#3b82f6', label: '30-60 days' },
+    '60-90': { color: '#f59e0b', label: '60-90 days' },
+    '90-180': { color: '#ef4444', label: '90-180 days' },
+    '180+': { color: '#6b7280', label: '180+ days' },
+  };
+  
+  const conversionChartConfig = {
+    rebooked: { color: '#10b981', label: 'Rebooked' },
+    review: { color: '#3b82f6', label: 'Left Review' },
+    noResponse: { color: '#6b7280', label: 'No Response' },
+  };
+  
+  const timeSeriesChartConfig = {
+    contacted: { color: '#3b82f6', label: 'Contacted' },
+    rebooked: { color: '#10b981', label: 'Rebooked' },
+    reviews: { color: '#f59e0b', label: 'Reviews' },
+  };
 
   return (
     <div className="space-y-6">
@@ -187,7 +214,7 @@ const PatientAnalytics: React.FC = () => {
                   </CardHeader>
                   <CardContent className="pt-0">
                     <div className="h-80">
-                      <ChartContainer config={{ statusChartData }} className="h-full">
+                      <ChartContainer config={statusChartConfig} className="h-full">
                         <PieChart>
                           <Pie
                             data={statusChartData}
@@ -197,6 +224,7 @@ const PatientAnalytics: React.FC = () => {
                             outerRadius={80}
                             fill="#8884d8"
                             dataKey="value"
+                            nameKey="name"
                             label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
                           >
                             {statusChartData.map((entry, index) => (
@@ -218,7 +246,7 @@ const PatientAnalytics: React.FC = () => {
                   </CardHeader>
                   <CardContent className="pt-0">
                     <div className="h-80">
-                      <ChartContainer config={{}} className="h-full">
+                      <ChartContainer config={daysSinceChartConfig} className="h-full">
                         <BarChart data={daysSinceChartData}>
                           <CartesianGrid strokeDasharray="3 3" />
                           <XAxis dataKey="name" />
@@ -246,7 +274,7 @@ const PatientAnalytics: React.FC = () => {
                   </CardHeader>
                   <CardContent className="pt-0">
                     <div className="h-80">
-                      <ChartContainer config={{}} className="h-full">
+                      <ChartContainer config={conversionChartConfig} className="h-full">
                         <PieChart>
                           <Pie
                             data={mockConversionRates}
@@ -256,6 +284,7 @@ const PatientAnalytics: React.FC = () => {
                             outerRadius={80}
                             fill="#8884d8"
                             dataKey="rate"
+                            nameKey="name"
                             label={({ name, rate }) => `${name}: ${rate}%`}
                           >
                             {mockConversionRates.map((entry, index) => (
@@ -333,7 +362,7 @@ const PatientAnalytics: React.FC = () => {
                 </CardHeader>
                 <CardContent className="pt-0">
                   <div className="h-[400px]">
-                    <ChartContainer config={{}} className="h-full">
+                    <ChartContainer config={timeSeriesChartConfig} className="h-full">
                       <LineChart data={mockTimeSeriesData}>
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="month" />
