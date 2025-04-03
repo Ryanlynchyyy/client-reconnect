@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Calendar, Clock, Filter, Search, User, ScrollText, X } from 'lucide-react';
+import { Calendar, Clock, Filter, Search, User, ScrollText, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -90,7 +90,7 @@ const EnhancedFilters: React.FC<FilterProps> = ({
                 onClick={() => setSearchTerm('')}
                 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
               >
-                <X className="h-4 w-4" />
+                <Check className="h-4 w-4" />
               </button>
             )}
           </div>
@@ -206,7 +206,7 @@ const EnhancedFilters: React.FC<FilterProps> = ({
                       setFiltersOpen(false);
                     }}
                   >
-                    <X className="h-3.5 w-3.5 mr-1.5" />
+                    <Check className="h-3.5 w-3.5 mr-1.5" />
                     Clear All Filters
                   </Button>
                 </div>
