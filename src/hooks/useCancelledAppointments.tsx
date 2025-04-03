@@ -14,6 +14,7 @@ interface CancelledAppointment {
   email: string;
   practitionerId: number;
   practitionerName: string;
+  notes?: string; // Added notes field
 }
 
 export const useCancelledAppointments = () => {
@@ -31,7 +32,8 @@ export const useCancelledAppointments = () => {
       phone: "0412 345 678",
       email: "john@example.com",
       practitionerId: 1,
-      practitionerName: "Ben Smith"
+      practitionerName: "Ben Smith",
+      notes: "Patient reported shoulder tension. Advised to continue stretching exercises and use heat pack. Mentioned tennis elbow symptoms beginning to develop. Recommended follow-up in 7-10 days."
     },
     {
       id: 2,
@@ -44,7 +46,8 @@ export const useCancelledAppointments = () => {
       phone: "0423 456 789",
       email: "sarah@example.com",
       practitionerId: 2,
-      practitionerName: "Josh Adams"
+      practitionerName: "Josh Adams",
+      notes: "Lower back pain diminishing after 3 treatments. Still experiencing morning stiffness. Patient mentioned swim training starting next week. Need to assess how this impacts recovery."
     },
     {
       id: 3,
@@ -57,7 +60,8 @@ export const useCancelledAppointments = () => {
       phone: "0434 567 890",
       email: "michael@example.com",
       practitionerId: 1,
-      practitionerName: "Ben Smith"
+      practitionerName: "Ben Smith",
+      notes: "First consultation for chronic neck pain. Identified poor desk ergonomics as likely cause. Provided initial treatment and postural advice. Patient needs comprehensive treatment plan with regular follow-ups."
     },
     {
       id: 4,
@@ -70,7 +74,8 @@ export const useCancelledAppointments = () => {
       phone: "0445 678 901",
       email: "lisa@example.com",
       practitionerId: 2,
-      practitionerName: "Josh Adams"
+      practitionerName: "Josh Adams",
+      notes: "Ongoing treatment for sports injury (hamstring). Progress slowed this session. Mentioned increased work stress affecting recovery. Might need to adjust recovery timeline and incorporate relaxation techniques."
     },
     {
       id: 5,
@@ -83,7 +88,8 @@ export const useCancelledAppointments = () => {
       phone: "0456 789 012",
       email: "david@example.com",
       practitionerId: 1, 
-      practitionerName: "Ben Smith"
+      practitionerName: "Ben Smith",
+      notes: "Regular patient missing usual appointment schedule. Last treatment focused on shoulder mobility. Patient mentioned upcoming vacation - might be reason for gap in treatments. Has responded well to maintenance schedule previously."
     }
   ]);
 
