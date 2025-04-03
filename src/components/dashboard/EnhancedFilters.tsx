@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Calendar, Clock, Filter, Search, User, ScrollText, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -104,7 +105,7 @@ const EnhancedFilters: React.FC<FilterProps> = ({
                 <SelectValue placeholder="All Practitioners" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Practitioners</SelectItem>
+                <SelectItem value="all">All Practitioners</SelectItem>
                 {practitioners.map(p => (
                   <SelectItem key={p.id} value={p.id.toString()}>{p.name}</SelectItem>
                 ))}

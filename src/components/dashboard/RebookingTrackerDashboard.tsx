@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
@@ -33,20 +32,15 @@ const RebookingTrackerDashboard: React.FC<RebookingTrackerDashboardProps> = ({ p
   const [dismissDialogOpen, setDismissDialogOpen] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState<{ id: number; name: string } | null>(null);
 
-  // Get appointment types from the data
   const appointmentTypes = [...new Set(appointments.map(a => a.appointmentType))].filter(Boolean) as string[];
 
-  // Filter the appointments based on selections
   const filteredAppointments = appointments.filter(appointment => {
-    // Practitioner filter
     const practitionerMatch = selectedPractitionerId === "all" || 
       appointment.practitionerId.toString() === selectedPractitionerId;
     
-    // Appointment type filter
     const typeMatch = selectedAppointmentType === "all" || 
       appointment.appointmentType === selectedAppointmentType;
     
-    // Date range filter
     let dateMatch = true;
     const today = new Date();
     if (selectedDateRange === "30") {
@@ -59,7 +53,6 @@ const RebookingTrackerDashboard: React.FC<RebookingTrackerDashboardProps> = ({ p
       dateMatch = appointment.gapDays > 90;
     }
     
-    // Tab filter
     let tabMatch = true;
     if (selectedTab === "cancelled") {
       tabMatch = appointment.status === "cancelled";
@@ -72,7 +65,6 @@ const RebookingTrackerDashboard: React.FC<RebookingTrackerDashboardProps> = ({ p
     return practitionerMatch && typeMatch && dateMatch && tabMatch;
   });
 
-  // Handle sending booking link based on template
   const handleSendFollowUp = (templateId: string) => {
     if (!selectedPatient) return;
     
@@ -84,7 +76,6 @@ const RebookingTrackerDashboard: React.FC<RebookingTrackerDashboardProps> = ({ p
     setSelectedPatient(null);
   };
 
-  // Handle dismiss with option to send review request
   const handleDismiss = (sendReview: boolean) => {
     if (!selectedPatient) return;
     
@@ -98,7 +89,6 @@ const RebookingTrackerDashboard: React.FC<RebookingTrackerDashboardProps> = ({ p
     setSelectedPatient(null);
   };
 
-  // Handle remind later functionality
   const handleConfirmReminder = (days: number) => {
     if (!selectedPatient) return;
     
@@ -110,7 +100,6 @@ const RebookingTrackerDashboard: React.FC<RebookingTrackerDashboardProps> = ({ p
     setSelectedPatient(null);
   };
 
-  // Get the count for each tab
   const getCategoryCount = (category: string) => {
     if (category === "all") return appointments.length;
     if (category === "cancelled") return appointments.filter(a => a.status === "cancelled").length;
