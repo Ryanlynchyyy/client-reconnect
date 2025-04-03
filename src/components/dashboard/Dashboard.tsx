@@ -760,4 +760,68 @@ const Dashboard: React.FC<DashboardProps> = ({ includeGapDetection = false }) =>
                         All Patients
                       </Button>
                       <Button 
-                        variant={appointmentCountFilter === '1-2' ? "default" :
+                        variant={appointmentCountFilter === '1-2' ? "default" : "outline"}
+                        onClick={() => setAppointmentCountFilter('1-2')}
+                        size="sm" 
+                        className={appointmentCountFilter === '1-2' ? 
+                          "bg-cliniko-primary hover:bg-cliniko-accent flex-1" : 
+                          "hover:bg-cliniko-muted hover:text-cliniko-primary flex-1"
+                        }
+                      >
+                        1-2 Appointments
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <p className="text-sm font-medium mb-2 text-gray-700">Appointment Status</p>
+                    <div className="flex space-x-2">
+                      <Button 
+                        variant={appointmentStatusFilter === 'all' ? "default" : "outline"}
+                        onClick={() => setAppointmentStatusFilter('all')} 
+                        size="sm"
+                        className={appointmentStatusFilter === 'all' ? 
+                          "bg-cliniko-primary hover:bg-cliniko-accent flex-1" : 
+                          "hover:bg-cliniko-muted hover:text-cliniko-primary flex-1"
+                        }
+                      >
+                        All Status
+                      </Button>
+                      <Button 
+                        variant={appointmentStatusFilter === 'cancelled' ? "default" : "outline"}
+                        onClick={() => setAppointmentStatusFilter('cancelled')} 
+                        size="sm"
+                        className={appointmentStatusFilter === 'cancelled' ? 
+                          "bg-cliniko-primary hover:bg-cliniko-accent flex-1" : 
+                          "hover:bg-cliniko-muted hover:text-cliniko-primary flex-1"
+                        }
+                      >
+                        Cancelled
+                      </Button>
+                      <Button 
+                        variant={appointmentStatusFilter === 'no-show' ? "default" : "outline"}
+                        onClick={() => setAppointmentStatusFilter('no-show')} 
+                        size="sm"
+                        className={appointmentStatusFilter === 'no-show' ? 
+                          "bg-cliniko-primary hover:bg-cliniko-accent flex-1" : 
+                          "hover:bg-cliniko-muted hover:text-cliniko-primary flex-1"
+                        }
+                      >
+                        No Show
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+      
+      {/* Patient Follow-Up List */}
+      {/* ... keep the rest of the code here ... */}
+    </div>
+  );
+};
+
+export default Dashboard;
