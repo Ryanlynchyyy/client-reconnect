@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Calendar, Clock, Filter, Search, User, ScrollText, Check } from 'lucide-react';
+import { Calendar, Clock, Filter, Search, User, ScrollText, Check, CalendarX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,6 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent } from '@/components/ui/card';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Slider } from '@/components/ui/slider';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
 
 interface PractitionerOption {
   id: number;
@@ -28,6 +30,10 @@ interface FilterProps {
   appointmentTypes: string[];
   selectedAppointmentTypes: string[];
   setSelectedAppointmentTypes: (types: string[]) => void;
+  timeFilter: 'all' | 'initial-2-weeks' | 'last-30-days' | 'last-90-days';
+  setTimeFilter: (filter: 'all' | 'initial-2-weeks' | 'last-30-days' | 'last-90-days') => void;
+  showCancelledOnly: boolean;
+  setShowCancelledOnly: (show: boolean) => void;
 }
 
 const EnhancedFilters: React.FC<FilterProps> = ({
@@ -42,7 +48,11 @@ const EnhancedFilters: React.FC<FilterProps> = ({
   setStatusFilters,
   appointmentTypes,
   selectedAppointmentTypes,
-  setSelectedAppointmentTypes
+  setSelectedAppointmentTypes,
+  timeFilter,
+  setTimeFilter,
+  showCancelledOnly,
+  setShowCancelledOnly
 }) => {
   const [filtersOpen, setFiltersOpen] = React.useState(false);
   
@@ -71,6 +81,8 @@ const EnhancedFilters: React.FC<FilterProps> = ({
       'large-gap': true
     });
     setSelectedAppointmentTypes([]);
+    setTimeFilter('all');
+    setShowCancelledOnly(false);
   };
   
   return (
@@ -122,8 +134,46 @@ const EnhancedFilters: React.FC<FilterProps> = ({
                   <span>Filters</span>
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-80 p-4" align="end">
-                <div className="space-y-4">
+              <PopoverContent className="w-96 p-4" align="end">
+                <div className="space-y-5">
+                  {/* Time period filters */}
+                  <div className="space-y-2">
+                    <Label className="text-sm font-semibold flex items-center gap-1.5">
+                      <Calendar className="h-4 w-4 text-beach-ocean" />
+                      Time Period
+                    </Label>
+                    <Tabs 
+                      value={timeFilter} 
+                      onValueChange={(value) => setTimeFilter(value as any)}
+                      className="w-full"
+                    >
+                      <TabsList className="grid grid-cols-4 w-full">
+                        <TabsTrigger value="all">All</TabsTrigger>
+                        <TabsTrigger value="initial-2-weeks">Initial 2w</TabsTrigger>
+                        <TabsTrigger value="last-30-days">Last 30d</TabsTrigger>
+                        <TabsTrigger value="last-90-days">Last 90d</TabsTrigger>
+                      </TabsList>
+                    </Tabs>
+                  </div>
+
+                  {/* Cancelled appointments filter */}
+                  <div className="space-y-2">
+                    <Label className="text-sm font-semibold flex items-center gap-1.5">
+                      <CalendarX className="h-4 w-4 text-beach-ocean" />
+                      Appointment Status
+                    </Label>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="cancelled-only"
+                        checked={showCancelledOnly}
+                        onCheckedChange={(checked) => setShowCancelledOnly(!!checked)}
+                      />
+                      <Label htmlFor="cancelled-only" className="text-sm">
+                        Show cancelled appointments only
+                      </Label>
+                    </div>
+                  </div>
+
                   <div>
                     <div className="flex items-center justify-between">
                       <Label className="text-sm font-semibold flex items-center gap-1.5">
@@ -214,6 +264,25 @@ const EnhancedFilters: React.FC<FilterProps> = ({
             </Popover>
           </div>
         </div>
+
+        {/* Active Filters Display */}
+        {(timeFilter !== 'all' || showCancelledOnly) && (
+          <div className="flex flex-wrap gap-2 mt-2">
+            {timeFilter !== 'all' && (
+              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                {timeFilter === 'initial-2-weeks' ? '2 weeks since initial' : 
+                 timeFilter === 'last-30-days' ? '30 days since last' : 
+                 '90 days since last'}
+              </Badge>
+            )}
+            
+            {showCancelledOnly && (
+              <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+                Cancelled appointments
+              </Badge>
+            )}
+          </div>
+        )}
       </CardContent>
     </Card>
   );

@@ -1,13 +1,13 @@
+
 import React, { useState } from 'react';
 import { useFollowUp } from '@/contexts/FollowUpContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
-import { MessageSquare, Check, Filter } from 'lucide-react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { MessageSquare, Check } from 'lucide-react';
+import EnhancedFilters from '@/components/dashboard/EnhancedFilters';
 
 const Patients: React.FC = () => {
   const { 
@@ -22,7 +22,16 @@ const Patients: React.FC = () => {
   } = useFollowUp();
   
   const [searchTerm, setSearchTerm] = useState('');
-  const [showFilters, setShowFilters] = useState(false);
+  const [minGapDays, setMinGapDays] = useState(14);
+  const [statusFilters, setStatusFilters] = useState({
+    cancelled: true,
+    'no-followup': true,
+    'large-gap': true
+  });
+  const [appointmentTypes] = useState(['Initial Consultation', 'Follow-up', 'Treatment', 'Assessment']);
+  const [selectedAppointmentTypes, setSelectedAppointmentTypes] = useState<string[]>([]);
+  const [timeFilter, setTimeFilter] = useState<'all' | 'initial-2-weeks' | 'last-30-days' | 'last-90-days'>('all');
+  const [showCancelledOnly, setShowCancelledOnly] = useState(false);
   
   const getPractitionerColor = (practitionerId?: number) => {
     if (!practitionerId) return "bg-gray-100 text-gray-800";
@@ -42,7 +51,28 @@ const Patients: React.FC = () => {
     const matchesPractitioner = !selectedPractitionerId || 
       patient.assignedPractitionerId === selectedPractitionerId;
     
-    return matchesSearch && matchesPractitioner;
+    // Time filter condition
+    let matchesTimeFilter = true;
+    if (timeFilter === 'initial-2-weeks') {
+      matchesTimeFilter = patient.isInitialAppointment && patient.daysSinceFirstAppointment && patient.daysSinceFirstAppointment <= 14;
+    } else if (timeFilter === 'last-30-days') {
+      matchesTimeFilter = patient.daysSinceLastAppointment && patient.daysSinceLastAppointment <= 30;
+    } else if (timeFilter === 'last-90-days') {
+      matchesTimeFilter = patient.daysSinceLastAppointment && patient.daysSinceLastAppointment <= 90;
+    }
+
+    // Cancelled appointment condition
+    const matchesCancelled = !showCancelledOnly || patient.hasRecentCancellation;
+    
+    // Gap days condition
+    const matchesGapDays = !patient.daysSinceLastAppointment || patient.daysSinceLastAppointment >= minGapDays;
+    
+    // Appointment type filtering
+    const matchesAppointmentType = selectedAppointmentTypes.length === 0 || 
+      (patient.lastAppointmentType && selectedAppointmentTypes.includes(patient.lastAppointmentType));
+    
+    return matchesSearch && matchesPractitioner && matchesTimeFilter && 
+           matchesCancelled && matchesGapDays && matchesAppointmentType;
   });
   
   return (
@@ -54,66 +84,24 @@ const Patients: React.FC = () => {
         </p>
       </div>
       
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle>Patient Search</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <Input
-              placeholder="Search by name..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-            
-            <div className="flex items-center justify-between">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center gap-2"
-              >
-                <Filter size={16} />
-                {showFilters ? 'Hide Filters' : 'Show Filters'}
-              </Button>
-              
-              {selectedPractitionerId && (
-                <Badge 
-                  variant="outline" 
-                  className="ml-2 cursor-pointer"
-                  onClick={() => setSelectedPractitionerId(null)}
-                >
-                  Filtered by practitioner × 
-                </Badge>
-              )}
-            </div>
-            
-            {showFilters && (
-              <div className="pt-2 pb-1 border-t">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Filter by Practitioner</label>
-                  <Select 
-                    value={selectedPractitionerId?.toString() || ""}
-                    onValueChange={(value) => setSelectedPractitionerId(value ? parseInt(value) : null)}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select a practitioner" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Practitioners</SelectItem>
-                      {practitioners.map(practitioner => (
-                        <SelectItem key={practitioner.id} value={practitioner.id.toString()}>
-                          {practitioner.first_name} {practitioner.last_name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+      <EnhancedFilters 
+        searchTerm={searchTerm}
+        setSearchTerm={setSearchTerm}
+        practitioners={practitioners.map(p => ({ id: p.id, name: `${p.first_name} ${p.last_name}` }))}
+        selectedPractitioner={selectedPractitionerId}
+        setSelectedPractitioner={setSelectedPractitionerId}
+        minGapDays={minGapDays}
+        setMinGapDays={setMinGapDays}
+        statusFilters={statusFilters}
+        setStatusFilters={setStatusFilters}
+        appointmentTypes={appointmentTypes}
+        selectedAppointmentTypes={selectedAppointmentTypes}
+        setSelectedAppointmentTypes={setSelectedAppointmentTypes}
+        timeFilter={timeFilter}
+        setTimeFilter={setTimeFilter}
+        showCancelledOnly={showCancelledOnly}
+        setShowCancelledOnly={setShowCancelledOnly}
+      />
       
       {error && (
         <Card className="border-red-200 bg-red-50">
