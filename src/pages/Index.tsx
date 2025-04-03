@@ -1,12 +1,12 @@
 
 import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/layout/AppLayout';
-import Dashboard from '@/components/dashboard/Dashboard';
 import { FollowUpProvider } from '@/contexts/FollowUpContext';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { InfoIcon, ArrowUpRight, Waves, SunMedium, Bell } from 'lucide-react';
+import { InfoIcon, ArrowUpRight, SunMedium, Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
+import PatientFollowUp from '@/components/patients/PatientFollowUp';
 
 const Index = () => {
   const [isExampleData, setIsExampleData] = useState(true);
@@ -73,7 +73,7 @@ const Index = () => {
             </Alert>
           )}
           
-          <Dashboard includeGapDetection={true} />
+          <PatientFollowUp />
         </div>
       </AppLayout>
     </FollowUpProvider>
