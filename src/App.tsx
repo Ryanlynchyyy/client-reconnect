@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import Patients from "./pages/Patients";
 import Settings from "./pages/Settings";
 import SMSTemplates from "./pages/SMSTemplates";
+import Analytics from "./pages/Analytics";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -23,6 +24,7 @@ const App = () => (
           <Route path="/patients" element={<Patients />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/sms" element={<SMSTemplates />} />
+          <Route path="/analytics" element={<Analytics />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
