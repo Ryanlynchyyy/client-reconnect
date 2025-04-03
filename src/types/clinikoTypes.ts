@@ -1,3 +1,4 @@
+
 export interface ClinikoApiResponse<T> {
   total_entries: number;
   total_pages: number;
@@ -94,6 +95,8 @@ export interface PatientWithFollowUpStatus extends ClinikoPatient {
   isInitialAppointment?: boolean;
   daysSinceFirstAppointment?: number;
   hasRecentCancellation?: boolean;
+  reminderDate?: string | null;
+  treatmentNotes?: string | null;
 }
 
 export interface WorkCoverReferral {

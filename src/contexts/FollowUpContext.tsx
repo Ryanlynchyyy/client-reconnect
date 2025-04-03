@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
 import { PatientWithFollowUpStatus, ClinikoAppointment, ClinikoPatient, ClinikioPractitioner } from '@/types/clinikoTypes';
 import { clinikoApi } from '@/services/clinikoApi';
@@ -51,7 +50,6 @@ export const FollowUpProvider: React.FC<{ children: ReactNode }> = ({ children }
     });
   }, [patients, filterDays, selectedPractitionerId]);
 
-  // Mock treatment notes for demonstration purposes
   const mockTreatmentNotes = [
     "Lower back pain treatment",
     "Shoulder rehabilitation",
@@ -62,7 +60,6 @@ export const FollowUpProvider: React.FC<{ children: ReactNode }> = ({ children }
     "Posture assessment and correction"
   ];
 
-  // Mock practitioners for demonstration purposes
   const mockPractitioners = [
     { id: 1, first_name: "Ben", last_name: "Smith", nickname: null, email: "ben@clinic.com", phone_number: null, image_url: null, created_at: "", updated_at: "", links: { self: "" } },
     { id: 2, first_name: "Josh", last_name: "Adams", nickname: null, email: "josh@clinic.com", phone_number: null, image_url: null, created_at: "", updated_at: "", links: { self: "" } }
