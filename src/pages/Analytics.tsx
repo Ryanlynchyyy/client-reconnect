@@ -1,11 +1,10 @@
-
 import React, { useState } from 'react';
 import AppLayout from '@/components/layout/AppLayout';
 import { FollowUpProvider } from '@/contexts/FollowUpContext';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { 
   Pie, PieChart, BarChart, Bar, LineChart, Line, 
-  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer 
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell
 } from 'recharts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartContainer } from '@/components/ui/chart';
@@ -14,7 +13,6 @@ import {
   LineChart as LineChartIcon, Calendar 
 } from 'lucide-react';
 
-// Create chart config objects for various chart types
 const statusChartConfig = {
   pending: { color: '#3b82f6', label: 'Pending' },
   contacted: { color: '#f59e0b', label: 'Contacted' },
@@ -45,7 +43,6 @@ const timeSeriesChartConfig = {
 const Analytics = () => {
   const [activeTab, setActiveTab] = useState("overview");
 
-  // Mock data for charts
   const statusChartData = [
     { name: 'Pending', value: 120, color: '#3b82f6' },
     { name: 'Contacted', value: 85, color: '#f59e0b' },
@@ -115,7 +112,6 @@ const Analytics = () => {
             </p>
           </div>
 
-          {/* Summary Statistics Cards */}
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
             {summaryStats.map((stat, index) => (
               <Card key={index} className="overflow-hidden">
@@ -135,7 +131,6 @@ const Analytics = () => {
             ))}
           </div>
 
-          {/* Tabs Navigation */}
           <Tabs
             defaultValue="overview"
             value={activeTab}
@@ -149,7 +144,6 @@ const Analytics = () => {
               <TabsTrigger value="trends">Trends</TabsTrigger>
             </TabsList>
 
-            {/* Overview Tab */}
             <TabsContent value="overview" className="space-y-4">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <Card>
@@ -235,7 +229,6 @@ const Analytics = () => {
               </Card>
             </TabsContent>
 
-            {/* Patient Status Tab */}
             <TabsContent value="patients" className="space-y-4">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <Card>
@@ -293,7 +286,6 @@ const Analytics = () => {
               </div>
             </TabsContent>
 
-            {/* Conversion Tab */}
             <TabsContent value="conversion" className="space-y-4">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <Card>
@@ -348,7 +340,6 @@ const Analytics = () => {
               </div>
             </TabsContent>
 
-            {/* Trends Tab */}
             <TabsContent value="trends" className="space-y-4">
               <Card>
                 <CardHeader>

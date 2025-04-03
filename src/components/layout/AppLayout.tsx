@@ -21,11 +21,36 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         
         {/* Navigation */}
         <nav className="flex flex-col p-2 md:p-4 space-y-1">
-          <NavItem to="/" icon={<LayoutDashboard size={20} />} label="Dashboard" />
-          <NavItem to="/patients" icon={<Users size={20} />} label="Patients" />
-          <NavItem to="/sms" icon={<MessageCircle size={20} />} label="SMS Templates" />
-          <NavItem to="/analytics" icon={<BarChart size={20} />} label="Analytics" />
-          <NavItem to="/settings" icon={<Settings size={20} />} label="Settings" />
+          <NavItem 
+            to="/" 
+            icon={<LayoutDashboard size={20} />} 
+            label="Dashboard" 
+            description="Patient follow-up queue" 
+          />
+          <NavItem 
+            to="/patients" 
+            icon={<Users size={20} />} 
+            label="Patients" 
+            description="All patient records"
+          />
+          <NavItem 
+            to="/sms" 
+            icon={<MessageCircle size={20} />} 
+            label="SMS Templates" 
+            description="Manage message templates"
+          />
+          <NavItem 
+            to="/analytics" 
+            icon={<BarChart size={20} />} 
+            label="Analytics" 
+            description="Follow-up performance data"
+          />
+          <NavItem 
+            to="/settings" 
+            icon={<Settings size={20} />} 
+            label="Settings" 
+            description="System configuration"
+          />
         </nav>
         
         {/* Footer */}
@@ -49,9 +74,10 @@ interface NavItemProps {
   to: string;
   icon: React.ReactNode;
   label: string;
+  description?: string;
 }
 
-const NavItem: React.FC<NavItemProps> = ({ to, icon, label }) => {
+const NavItem: React.FC<NavItemProps> = ({ to, icon, label, description }) => {
   return (
     <NavLink
       to={to}
@@ -62,7 +88,10 @@ const NavItem: React.FC<NavItemProps> = ({ to, icon, label }) => {
       )}
     >
       {icon}
-      <span>{label}</span>
+      <div className="flex flex-col">
+        <span>{label}</span>
+        {description && <span className="text-xs text-white/70">{description}</span>}
+      </div>
     </NavLink>
   );
 };

@@ -19,17 +19,27 @@ const Index = () => {
   return (
     <FollowUpProvider>
       <AppLayout>
-        {isExampleData && (
-          <Alert className="mb-6">
-            <InfoIcon className="h-4 w-4" />
-            <AlertTitle>Example Data Mode</AlertTitle>
-            <AlertDescription>
-              You're currently viewing example data to demonstrate how the application works. 
-              Connect your Cliniko API key in Settings to use with real data.
-            </AlertDescription>
-          </Alert>
-        )}
-        <Dashboard />
+        <div className="space-y-6">
+          <div className="flex flex-col gap-2">
+            <h1 className="text-3xl font-bold tracking-tight">Follow-Up Dashboard</h1>
+            <p className="text-muted-foreground">
+              Manage patient follow-ups and send reminder messages
+            </p>
+          </div>
+          
+          {isExampleData && (
+            <Alert className="mb-6">
+              <InfoIcon className="h-4 w-4" />
+              <AlertTitle>Example Data Mode</AlertTitle>
+              <AlertDescription>
+                You're currently viewing example data to demonstrate how the application works. 
+                Connect your Cliniko API key in Settings to use with real data.
+              </AlertDescription>
+            </Alert>
+          )}
+          
+          <Dashboard />
+        </div>
       </AppLayout>
     </FollowUpProvider>
   );
