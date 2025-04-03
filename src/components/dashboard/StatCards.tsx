@@ -91,12 +91,12 @@ const StatCards: React.FC<StatCardsProps> = ({
               <div 
                 className="h-full bg-sky-500 rounded-full" 
                 style={{ 
-                  width: `${Math.min(100, (groupedPatients.pending.length / filteredPatients.length) * 100).toFixed(0)}%` 
+                  width: `${Math.min(100, (groupedPatients.pending.length / Math.max(1, filteredPatients.length)) * 100).toFixed(0)}%` 
                 }}
               ></div>
             </div>
             <span className="text-xs font-medium">
-              {Math.min(100, ((groupedPatients.pending.length / filteredPatients.length) * 100).toFixed(0))}%
+              {Math.min(100, ((groupedPatients.pending.length / Math.max(1, filteredPatients.length)) * 100).toFixed(0))}%
             </span>
           </div>
         </CardFooter>
