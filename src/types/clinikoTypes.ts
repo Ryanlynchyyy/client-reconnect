@@ -93,6 +93,12 @@ export interface PatientWithFollowUpStatus extends ClinikoPatient {
   treatmentNotes?: string | null;
   reminderDate?: string | null;
   practitionerName?: string | null;
+  
+  // Added properties to fix the TypeScript errors
+  isInitialAppointment?: boolean;
+  daysSinceFirstAppointment?: number | null;
+  hasRecentCancellation?: boolean;
+  lastAppointmentType?: string | null;
 }
 
 // New interfaces for WorkCover tracking

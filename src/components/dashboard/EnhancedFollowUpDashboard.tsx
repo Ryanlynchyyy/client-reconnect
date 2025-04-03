@@ -16,7 +16,6 @@ import EnhancedFilters from './EnhancedFilters';
 import FollowUpCard from './FollowUpCard';
 import DashboardHeader from './DashboardHeader';
 
-// Mock data - replace with API calls in a real implementation
 const mockPatients = [
   {
     id: '1',
@@ -115,34 +114,29 @@ const EnhancedFollowUpDashboard: React.FC = () => {
   const [showReminderDialog, setShowReminderDialog] = useState(false);
   const [showDismissDialog, setShowDismissDialog] = useState(false);
   const [selectedPatientForAction, setSelectedPatientForAction] = useState<string | null>(null);
+  const [timeFilter, setTimeFilter] = useState<'all' | 'initial-2-weeks' | 'last-30-days' | 'last-90-days'>('all');
+  const [showCancelledOnly, setShowCancelledOnly] = useState(false);
 
-  // Filter patients based on selected criteria
   const filteredPatients = patients.filter(patient => {
-    // Search filter
     const matchesSearch = !searchTerm || 
       patient.patientName.toLowerCase().includes(searchTerm.toLowerCase()) || 
       patient.phone.includes(searchTerm) ||
       (patient.notes && patient.notes.toLowerCase().includes(searchTerm.toLowerCase()));
     
-    // Practitioner filter
     const matchesPractitioner = !selectedPractitioner || patient.practitionerId === selectedPractitioner;
     
-    // Status filter based on tabs or checkboxes
     const matchesStatus = selectedTab === 'all' 
       ? statusFilters[patient.status]
       : selectedTab === patient.status;
     
-    // Gap days filter
     const matchesGapDays = patient.gapDays >= minGapDays;
     
-    // Appointment type filter
     const matchesAppointmentType = selectedAppointmentTypes.length === 0 || 
       selectedAppointmentTypes.includes(patient.appointmentType);
     
     return matchesSearch && matchesPractitioner && matchesStatus && matchesGapDays && matchesAppointmentType;
   });
 
-  // Sort patients
   const sortedPatients = [...filteredPatients].sort((a, b) => {
     if (sortConfig.key === 'patientName') {
       return sortConfig.direction === 'asc'
@@ -257,7 +251,6 @@ const EnhancedFollowUpDashboard: React.FC = () => {
     return '< 30 days';
   };
 
-  // Group patients by time frame for statistics
   const timeFrameGroups = patients.reduce((acc, patient) => {
     const timeFrame = getTimeFrameLabel(patient.gapDays);
     acc[timeFrame] = (acc[timeFrame] || 0) + 1;
@@ -268,7 +261,6 @@ const EnhancedFollowUpDashboard: React.FC = () => {
     <div className="space-y-6">
       <DashboardHeader handleRefresh={handleRefresh} isLoading={isLoading} />
 
-      {/* Stats Row */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="bg-gradient-to-br from-beach-sand to-beach-foam border-beach-coral/20">
           <CardHeader className="pb-2">
@@ -324,6 +316,10 @@ const EnhancedFollowUpDashboard: React.FC = () => {
         appointmentTypes={appointmentTypes}
         selectedAppointmentTypes={selectedAppointmentTypes}
         setSelectedAppointmentTypes={setSelectedAppointmentTypes}
+        timeFilter={timeFilter}
+        setTimeFilter={setTimeFilter}
+        showCancelledOnly={showCancelledOnly}
+        setShowCancelledOnly={setShowCancelledOnly}
       />
 
       <Tabs defaultValue="all" value={selectedTab} onValueChange={setSelectedTab} className="w-full">
@@ -456,14 +452,13 @@ const EnhancedFollowUpDashboard: React.FC = () => {
         </TabsContent>
       </Tabs>
 
-      {/* Reusing existing dialog components */}
       <TemplateSelectionDialog
         open={showTemplateDialog}
         setOpen={setShowTemplateDialog}
         patientName={selectedPatientForAction ? patients.find(p => p.id === selectedPatientForAction)?.patientName || '' : 'selected patients'}
         onConfirm={handleSendTemplate}
       />
-      
+
       <ReminderDialog
         reminderDialogOpen={showReminderDialog}
         setReminderDialogOpen={setShowReminderDialog}
