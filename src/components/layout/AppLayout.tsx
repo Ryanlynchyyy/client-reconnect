@@ -10,8 +10,7 @@ import {
   BarChart, 
   ChevronRight,
   Briefcase,
-  Stethoscope,
-  CalendarClock
+  CalendarX2
 } from 'lucide-react';
 
 interface AppLayoutProps {
@@ -72,10 +71,10 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             badge="New"
           />
           <NavItem 
-            to="/booking-gaps" 
-            icon={<CalendarClock size={20} />} 
-            label="Booking Gaps" 
-            description="Gap detection"
+            to="/cancelled-appointments" 
+            icon={<CalendarX2 size={20} />} 
+            label="Cancelled Appointments" 
+            description="Cancellation tracking"
             collapsed={collapsed}
             badge="New"
           />

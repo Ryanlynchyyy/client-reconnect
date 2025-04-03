@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { 
@@ -21,9 +22,15 @@ import {
   Filter,
   Phone,
   CalendarCheck,
+  ArrowUpDown,
+  Send,
+  CalendarPlus
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { GapStats } from './GapStats';
+import { AppointmentList } from './AppointmentList';
 
+// Mock data - in a real app this would come from your context or API
 const mockGaps = [
   {
     id: 1,
@@ -92,7 +99,7 @@ const mockGaps = [
   },
 ];
 
-export function BookingGapDetection() {
+export function CancelledAppointmentsView() {
   const { toast } = useToast();
   const [gaps, setGaps] = useState(mockGaps);
   const [searchTerm, setSearchTerm] = useState('');
@@ -100,6 +107,8 @@ export function BookingGapDetection() {
   const [selectedTab, setSelectedTab] = useState<string>("all");
   const [showFilters, setShowFilters] = useState(false);
   const [minGapDays, setMinGapDays] = useState(30);
+  const [sortField, setSortField] = useState<'date' | 'name'>('date');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   
   const practitioners = [
     { id: 1, name: "Ben Johnson" },
@@ -122,6 +131,19 @@ export function BookingGapDetection() {
     return matchesSearch && matchesPractitioner && matchesStatus && matchesMinGap;
   });
 
+  // Sort the filtered gaps
+  const sortedGaps = [...filteredGaps].sort((a, b) => {
+    if (sortField === 'date') {
+      return sortDirection === 'asc' 
+        ? a.gapDays - b.gapDays 
+        : b.gapDays - a.gapDays;
+    } else {
+      return sortDirection === 'asc'
+        ? a.patientName.localeCompare(b.patientName)
+        : b.patientName.localeCompare(a.patientName);
+    }
+  });
+
   const handleSendMessage = (patientId: number, patientName: string) => {
     toast({
       title: "Message Sent",
@@ -129,31 +151,12 @@ export function BookingGapDetection() {
     });
   };
 
-  const getPractitionerColor = (practitionerId: number) => {
-    switch (practitionerId) {
-      case 1: return "bg-blue-100 text-blue-800";
-      case 2: return "bg-green-100 text-green-800";
-      default: return "bg-gray-100 text-gray-800";
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "cancelled": return "bg-orange-100 text-orange-800";
-      case "missed": return "bg-red-100 text-red-800";
-      case "large-gap": return "bg-yellow-100 text-yellow-800";
-      case "no-followup": return "bg-purple-100 text-purple-800";
-      default: return "bg-gray-100 text-gray-800";
-    }
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "cancelled": return <CalendarX2 className="h-4 w-4 mr-1" />;
-      case "missed": return <UserX className="h-4 w-4 mr-1" />;
-      case "large-gap": return <CalendarClock className="h-4 w-4 mr-1" />;
-      case "no-followup": return <CalendarCheck className="h-4 w-4 mr-1" />;
-      default: return null;
+  const handleToggleSort = (field: 'date' | 'name') => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('desc');
     }
   };
 
@@ -163,86 +166,36 @@ export function BookingGapDetection() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Booking Gap Detection</h1>
-        <p className="text-muted-foreground">
-          Find patients with booking gaps, cancellations, or who haven't returned
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Cancelled Appointments</h1>
+          <p className="text-muted-foreground">
+            Find patients who've cancelled, missed appointments, or have large booking gaps
+          </p>
+        </div>
+        
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" className="flex items-center gap-1">
+            <CalendarPlus className="h-4 w-4" /> 
+            <span className="hidden sm:inline">Export</span>
+          </Button>
+          <Button 
+            className="bg-cliniko-primary hover:bg-cliniko-accent flex items-center gap-1"
+            size="sm"
+            onClick={() => toast({ title: "Sending reminders", description: "Sending booking reminders to all patients with cancelled appointments" })}
+          >
+            <Send className="h-4 w-4" />
+            <span className="hidden sm:inline">Bulk Send</span>
+          </Button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xl font-bold text-orange-800">
-              {getStatusCount('cancelled')}
-            </CardTitle>
-            <CardDescription className="text-orange-700">Cancelled Appointments</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center">
-              <CalendarX2 className="h-8 w-8 text-orange-500 mr-2" />
-              <p className="text-sm text-muted-foreground">
-                Cancelled and never rebooked
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xl font-bold text-red-800">
-              {getStatusCount('missed')}
-            </CardTitle>
-            <CardDescription className="text-red-700">DNA/No-shows</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center">
-              <UserX className="h-8 w-8 text-red-500 mr-2" />
-              <p className="text-sm text-muted-foreground">
-                Missed appointments without reschedule
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xl font-bold text-yellow-800">
-              {getStatusCount('large-gap')}
-            </CardTitle>
-            <CardDescription className="text-yellow-700">Large Booking Gaps</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center">
-              <CalendarClock className="h-8 w-8 text-yellow-500 mr-2" />
-              <p className="text-sm text-muted-foreground">
-                Long gaps between appointments
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xl font-bold text-purple-800">
-              {getStatusCount('no-followup')}
-            </CardTitle>
-            <CardDescription className="text-purple-700">No Second Booking</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center">
-              <CalendarCheck className="h-8 w-8 text-purple-500 mr-2" />
-              <p className="text-sm text-muted-foreground">
-                Initial consult without follow-up
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <GapStats getStatusCount={getStatusCount} />
 
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle>Booking Gap Analysis</CardTitle>
+          <CardTitle className="text-xl">Appointment Management</CardTitle>
+          <CardDescription>Track and follow up on patients who need rebooking</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
@@ -275,8 +228,8 @@ export function BookingGapDetection() {
                 <span>Filters</span>
               </Button>
               <Select
-                value={selectedPractitioner?.toString() || ""}
-                onValueChange={(value) => setSelectedPractitioner(value ? parseInt(value) : null)}
+                value={selectedPractitioner?.toString() || "all"}
+                onValueChange={(value) => setSelectedPractitioner(value === "all" ? null : parseInt(value))}
               >
                 <SelectTrigger className="w-full sm:w-[180px]">
                   <SelectValue placeholder="All Practitioners" />
@@ -296,7 +249,7 @@ export function BookingGapDetection() {
           {showFilters && (
             <Card className="bg-muted/50">
               <CardContent className="pt-4 pb-2">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <div className="space-y-1 w-full sm:w-auto">
                     <label className="text-sm font-medium">Min Gap (Days)</label>
                     <Select 
@@ -313,6 +266,33 @@ export function BookingGapDetection() {
                         <SelectItem value="60">60 days</SelectItem>
                       </SelectContent>
                     </Select>
+                  </div>
+                  <div className="space-y-1 w-full sm:w-auto">
+                    <label className="text-sm font-medium">Sort by</label>
+                    <div className="flex gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        className={`flex items-center gap-1 ${sortField === 'date' ? 'bg-muted' : ''}`}
+                        onClick={() => handleToggleSort('date')}
+                      >
+                        Date
+                        {sortField === 'date' && (
+                          <ArrowUpDown className="h-3 w-3" />
+                        )}
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        className={`flex items-center gap-1 ${sortField === 'name' ? 'bg-muted' : ''}`}
+                        onClick={() => handleToggleSort('name')}
+                      >
+                        Name
+                        {sortField === 'name' && (
+                          <ArrowUpDown className="h-3 w-3" />
+                        )}
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </CardContent>
@@ -344,56 +324,10 @@ export function BookingGapDetection() {
             </TabsList>
 
             <TabsContent value={selectedTab} className="mt-0">
-              {filteredGaps.length === 0 ? (
-                <div className="p-8 text-center">
-                  <p className="text-muted-foreground">No booking gaps found matching your criteria</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {filteredGaps.map((gap) => (
-                    <Card key={gap.id} className="overflow-hidden">
-                      <CardContent className="p-0">
-                        <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                          <div className="space-y-2">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <h3 className="text-lg font-medium">{gap.patientName}</h3>
-                              <Badge className={getPractitionerColor(gap.practitionerId)}>
-                                {gap.practitionerName}
-                              </Badge>
-                              <Badge className={getStatusColor(gap.status)} variant="secondary">
-                                {getStatusIcon(gap.status)}
-                                {gap.status === "cancelled" && "Cancelled"}
-                                {gap.status === "missed" && "Missed Appointment"}
-                                {gap.status === "large-gap" && `${gap.gapDays} Day Gap`}
-                                {gap.status === "no-followup" && "No Follow-up"}
-                              </Badge>
-                            </div>
-                            <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-muted-foreground">
-                              <span>Last Appointment: {format(new Date(gap.lastAppointmentDate), "PPP")}</span>
-                              <span>{gap.appointmentType}</span>
-                            </div>
-                          </div>
-                          <div className="flex flex-col sm:flex-row gap-2">
-                            <Button
-                              variant="outline"
-                              className="flex items-center gap-2"
-                            >
-                              <Phone className="h-4 w-4" />
-                              {gap.phone}
-                            </Button>
-                            <Button
-                              className="bg-cliniko-primary hover:bg-cliniko-accent"
-                              onClick={() => handleSendMessage(gap.patientId, gap.patientName)}
-                            >
-                              Send Booking Link
-                            </Button>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
+              <AppointmentList 
+                gaps={sortedGaps} 
+                onSendMessage={handleSendMessage} 
+              />
             </TabsContent>
           </Tabs>
         </CardContent>

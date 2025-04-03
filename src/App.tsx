@@ -10,7 +10,7 @@ import Settings from "./pages/Settings";
 import SMSTemplates from "./pages/SMSTemplates";
 import Analytics from "./pages/Analytics";
 import WorkCover from "./pages/WorkCover";
-import BookingGaps from "./pages/BookingGaps";
+import CancelledAppointments from "./pages/CancelledAppointments";
 import NotFound from "./pages/NotFound";
 import { ThemeProvider } from "next-themes";
 
@@ -18,10 +18,10 @@ import { ThemeProvider } from "next-themes";
 const queryClient = new QueryClient();
 
 const App = () => (
-  <BrowserRouter>
-    <ThemeProvider attribute="class" defaultTheme="light">
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
+  <ThemeProvider attribute="class" defaultTheme="light">
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <BrowserRouter>
           <Toaster />
           <Sonner />
           <Routes>
@@ -31,14 +31,14 @@ const App = () => (
             <Route path="/sms" element={<SMSTemplates />} />
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/workcover" element={<WorkCover />} />
-            <Route path="/booking-gaps" element={<BookingGaps />} />
+            <Route path="/cancelled-appointments" element={<CancelledAppointments />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
-        </TooltipProvider>
-      </QueryClientProvider>
-    </ThemeProvider>
-  </BrowserRouter>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  </ThemeProvider>
 );
 
 export default App;
