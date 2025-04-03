@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { format, addDays } from 'date-fns';
 import { 
@@ -39,7 +38,6 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 
-// Mock data for demonstration
 const mockReferrals = [
   {
     id: 1,
@@ -127,7 +125,6 @@ export function WorkCoverTracker() {
     { id: 2, name: "Josh Miller" },
   ];
 
-  // Filter referrals based on search and practitioner
   const filteredReferrals = referrals.filter(referral => {
     const matchesSearch = !searchTerm || 
       referral.patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -139,18 +136,15 @@ export function WorkCoverTracker() {
     return matchesSearch && matchesPractitioner;
   });
 
-  // Priority referrals are those that need attention soon
   const priorityReferrals = filteredReferrals.filter(
     ref => ref.usedSessions >= 6 && ref.usedSessions < ref.approvedSessions
   );
 
-  // Warning referrals have used all their sessions
   const warningReferrals = filteredReferrals.filter(
     ref => ref.usedSessions >= ref.approvedSessions
   );
 
   const handleNewReferral = () => {
-    // In a real app, this would save to the database
     setShowAddReferral(false);
     
     toast({
@@ -290,7 +284,7 @@ export function WorkCoverTracker() {
                 <SelectValue placeholder="Filter by Practitioner" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Practitioners</SelectItem>
+                <SelectItem value="all">All Practitioners</SelectItem>
                 {practitioners.map((p) => (
                   <SelectItem key={p.id} value={p.id.toString()}>
                     {p.name}
@@ -376,7 +370,6 @@ export function WorkCoverTracker() {
         </CardContent>
       </Card>
 
-      {/* Add New Referral Dialog */}
       <Dialog open={showAddReferral} onOpenChange={setShowAddReferral}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
@@ -448,7 +441,6 @@ export function WorkCoverTracker() {
         </DialogContent>
       </Dialog>
 
-      {/* AHTR Form Dialog */}
       <Dialog open={showFormDialog} onOpenChange={setShowFormDialog}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useFollowUp } from '@/contexts/FollowUpContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,7 +24,6 @@ const Patients: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   
-  // Get practitioner color based on ID
   const getPractitionerColor = (practitionerId?: number) => {
     if (!practitionerId) return "bg-gray-100 text-gray-800";
     switch (practitionerId) {
@@ -37,13 +35,10 @@ const Patients: React.FC = () => {
     }
   };
   
-  // Filter patients by search term and practitioner
   const filteredPatients = patients.filter(patient => {
-    // Filter by search term
     const matchesSearch = !searchTerm || 
       `${patient.first_name} ${patient.last_name}`.toLowerCase().includes(searchTerm.toLowerCase());
     
-    // Filter by practitioner
     const matchesPractitioner = !selectedPractitionerId || 
       patient.assignedPractitionerId === selectedPractitionerId;
     
@@ -105,7 +100,7 @@ const Patients: React.FC = () => {
                       <SelectValue placeholder="Select a practitioner" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All Practitioners</SelectItem>
+                      <SelectItem value="all">All Practitioners</SelectItem>
                       {practitioners.map(practitioner => (
                         <SelectItem key={practitioner.id} value={practitioner.id.toString()}>
                           {practitioner.first_name} {practitioner.last_name}
@@ -120,7 +115,6 @@ const Patients: React.FC = () => {
         </CardContent>
       </Card>
       
-      {/* Error state */}
       {error && (
         <Card className="border-red-200 bg-red-50">
           <CardContent className="pt-6">
@@ -129,7 +123,6 @@ const Patients: React.FC = () => {
         </Card>
       )}
       
-      {/* Patients table */}
       <Card>
         <CardContent className="pt-6">
           <Table>

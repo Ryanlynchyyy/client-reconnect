@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { 
@@ -25,7 +24,6 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
-// Mock data for demonstration
 const mockGaps = [
   {
     id: 1,
@@ -108,7 +106,6 @@ export function BookingGapDetection() {
     { id: 2, name: "Josh Miller" },
   ];
 
-  // Filter gaps based on search, practitioner, status and minimum gap days
   const filteredGaps = gaps.filter(gap => {
     const matchesSearch = !searchTerm || 
       gap.patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -126,7 +123,6 @@ export function BookingGapDetection() {
   });
 
   const handleSendMessage = (patientId: number, patientName: string) => {
-    // This would integrate with your SMS system in a real implementation
     toast({
       title: "Message Sent",
       description: `Booking reminder sent to ${patientName}`,
@@ -286,7 +282,7 @@ export function BookingGapDetection() {
                   <SelectValue placeholder="All Practitioners" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Practitioners</SelectItem>
+                  <SelectItem value="all">All Practitioners</SelectItem>
                   {practitioners.map((p) => (
                     <SelectItem key={p.id} value={p.id.toString()}>
                       {p.name}
