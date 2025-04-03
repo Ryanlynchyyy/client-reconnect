@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useFollowUp } from '@/contexts/FollowUpContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -38,20 +39,23 @@ const Dashboard: React.FC = () => {
     markAsContacted(patient.id);
   };
 
-  const groupedPatients = searchResults.reduce<Record<string, PatientWithFollowUpStatus[]>>(
-    (acc, patient) => {
-      if (patient.daysSinceLastAppointment === null) return acc;
-      
-      let key = '30-60 days';
-      if (patient.daysSinceLastAppointment > 90) key = '90+ days';
-      else if (patient.daysSinceLastAppointment > 60) key = '60-90 days';
-      
-      if (!acc[key]) acc[key] = [];
-      acc[key].push(patient);
-      return acc;
-    }, 
-    {}
-  );
+  // Group patients by days since last appointment
+  const groupedPatients = {
+    '30-60 days': searchResults.filter(patient => 
+      patient.daysSinceLastAppointment !== null && 
+      patient.daysSinceLastAppointment >= 30 &&
+      patient.daysSinceLastAppointment < 60
+    ),
+    '60-90 days': searchResults.filter(patient => 
+      patient.daysSinceLastAppointment !== null && 
+      patient.daysSinceLastAppointment >= 60 &&
+      patient.daysSinceLastAppointment < 90
+    ),
+    '90+ days': searchResults.filter(patient => 
+      patient.daysSinceLastAppointment !== null && 
+      patient.daysSinceLastAppointment >= 90
+    ),
+  };
 
   return (
     <div className="space-y-6">
@@ -146,50 +150,74 @@ const Dashboard: React.FC = () => {
       )}
       
       {!isLoading && !error && (
-        <Tabs defaultValue="all" className="w-full">
-          <TabsList className="mb-4">
-            <TabsTrigger value="all">All Patients</TabsTrigger>
-            {Object.keys(groupedPatients).map(group => (
-              <TabsTrigger key={group} value={group}>
-                {group} ({groupedPatients[group]?.length || 0})
-              </TabsTrigger>
-            ))}
-          </TabsList>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <PatientGroup 
+            title="30-60 Days"
+            description="Patients who haven't returned in 30-60 days"
+            patients={groupedPatients['30-60 days']}
+            onDismiss={dismissPatient}
+            onSendSMS={handleSendSMS}
+          />
           
-          <TabsContent value="all" className="space-y-4">
-            {searchResults.length > 0 ? (
-              searchResults.map(patient => (
-                <PatientCard 
-                  key={patient.id} 
-                  patient={patient} 
-                  onDismiss={dismissPatient}
-                  onSendSMS={handleSendSMS}
-                />
-              ))
-            ) : (
-              <Card>
-                <CardContent className="py-8 text-center">
-                  <p className="text-gray-500">No patients match your criteria</p>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
+          <PatientGroup 
+            title="60-90 Days"
+            description="Patients who haven't returned in 60-90 days"
+            patients={groupedPatients['60-90 days']}
+            onDismiss={dismissPatient}
+            onSendSMS={handleSendSMS}
+          />
           
-          {Object.keys(groupedPatients).map(group => (
-            <TabsContent key={group} value={group} className="space-y-4">
-              {groupedPatients[group]?.map(patient => (
-                <PatientCard 
-                  key={patient.id} 
-                  patient={patient}
-                  onDismiss={dismissPatient}
-                  onSendSMS={handleSendSMS}
-                />
-              ))}
-            </TabsContent>
-          ))}
-        </Tabs>
+          <PatientGroup 
+            title="90+ Days"
+            description="Patients who haven't returned in over 90 days"
+            patients={groupedPatients['90+ days']}
+            onDismiss={dismissPatient}
+            onSendSMS={handleSendSMS}
+          />
+        </div>
       )}
     </div>
+  );
+};
+
+interface PatientGroupProps {
+  title: string;
+  description: string;
+  patients: PatientWithFollowUpStatus[];
+  onDismiss: (id: number) => void;
+  onSendSMS: (patient: PatientWithFollowUpStatus) => void;
+}
+
+const PatientGroup: React.FC<PatientGroupProps> = ({ 
+  title, 
+  description, 
+  patients, 
+  onDismiss,
+  onSendSMS
+}) => {
+  return (
+    <Card className="h-full flex flex-col">
+      <CardHeader>
+        <CardTitle>{title}</CardTitle>
+        <CardDescription>{description}</CardDescription>
+      </CardHeader>
+      <CardContent className="flex-grow overflow-auto max-h-[500px]">
+        {patients.length === 0 ? (
+          <p className="text-center text-gray-500 py-8">No patients in this category</p>
+        ) : (
+          <div className="space-y-4">
+            {patients.map(patient => (
+              <PatientCard 
+                key={patient.id} 
+                patient={patient}
+                onDismiss={onDismiss}
+                onSendSMS={onSendSMS}
+              />
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 };
 
