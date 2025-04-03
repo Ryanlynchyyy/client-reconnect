@@ -675,7 +675,9 @@ const Dashboard: React.FC<DashboardProps> = ({ includeGapDetection = false }) =>
                     <p className="text-sm font-medium mb-2 text-gray-700">Practitioner</p>
                     <Select 
                       value={selectedPractitionerId?.toString() || "all"}
-                      onValueChange={(value) => setSelectedPractitionerId(value === "all" ? null : Number(value))}
+                      onValueChange={(value) => {
+                        setSelectedPractitionerId(value === "all" ? null : Number(value));
+                      }}
                     >
                       <SelectTrigger className="w-full text-sm">
                         <SelectValue placeholder="All practitioners" />
