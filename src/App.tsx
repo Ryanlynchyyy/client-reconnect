@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import Patients from "./pages/Patients";
 import Settings from "./pages/Settings";
 import SMSTemplates from "./pages/SMSTemplates";
+import SMSReplies from "./pages/SMSReplies";
 import Analytics from "./pages/Analytics";
 import WorkCover from "./pages/WorkCover";
 import NotFound from "./pages/NotFound";
@@ -28,6 +29,7 @@ const App = () => (
             <Route path="/patients" element={<Patients />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/sms" element={<SMSTemplates />} />
+            <Route path="/sms/replies" element={<SMSReplies />} />
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/workcover" element={<WorkCover />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

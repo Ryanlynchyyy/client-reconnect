@@ -7,6 +7,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
+import { Link } from 'react-router-dom';
+import { MessageSquare } from 'lucide-react';
 
 interface SmsTemplate {
   id: string;
@@ -153,11 +155,20 @@ const SmsTemplates: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">SMS Templates</h1>
-        <p className="text-gray-600">
-          Create and manage your SMS templates for patient follow-ups
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">SMS Templates</h1>
+          <p className="text-gray-600">
+            Create and manage your SMS templates for patient follow-ups
+          </p>
+        </div>
+        
+        <Link to="/sms/replies">
+          <Button variant="outline" className="flex items-center gap-2 w-full sm:w-auto">
+            <MessageSquare className="h-4 w-4" />
+            <span>View SMS Replies</span>
+          </Button>
+        </Link>
       </div>
       
       <Tabs defaultValue="templates">
