@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
@@ -10,7 +9,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { AlertCircle, ArrowUpDown, CalendarClock, CheckCircle2, ChevronDown, ChevronUp, RefreshCw, Send, Users } from 'lucide-react';
-import { TemplateSelectionDialog, ReminderDialog, DismissConfirmDialog } from '@/components/dashboard/DismissConfirmDialog';
+import DismissConfirmDialog from '@/components/dashboard/DismissConfirmDialog';
+import TemplateSelectionDialog from '@/components/dashboard/TemplateSelectionDialog';
+import ReminderDialog from '@/components/dashboard/ReminderDialog';
 import EnhancedFilters from './EnhancedFilters';
 import FollowUpCard from './FollowUpCard';
 import DashboardHeader from './DashboardHeader';
@@ -319,7 +320,7 @@ const EnhancedFollowUpDashboard: React.FC = () => {
         minGapDays={minGapDays}
         setMinGapDays={setMinGapDays}
         statusFilters={statusFilters}
-        setStatusFilters={setStatusFilters}
+        setStatusFilters={(filters) => setStatusFilters(filters as typeof statusFilters)}
         appointmentTypes={appointmentTypes}
         selectedAppointmentTypes={selectedAppointmentTypes}
         setSelectedAppointmentTypes={setSelectedAppointmentTypes}
@@ -456,30 +457,23 @@ const EnhancedFollowUpDashboard: React.FC = () => {
       </Tabs>
 
       {/* Reusing existing dialog components */}
-      <TemplateSelectionDialog 
-        open={showTemplateDialog} 
-        onClose={() => {
-          setShowTemplateDialog(false);
-          setSelectedPatientForAction(null);
-        }}
-        onSelect={handleSendTemplate}
+      <TemplateSelectionDialog
+        open={showTemplateDialog}
+        setOpen={setShowTemplateDialog}
+        patientName={selectedPatientForAction ? patients.find(p => p.id === selectedPatientForAction)?.patientName || '' : 'selected patients'}
+        onConfirm={handleSendTemplate}
       />
       
       <ReminderDialog
-        open={showReminderDialog}
-        onClose={() => {
-          setShowReminderDialog(false);
-          setSelectedPatientForAction(null);
-        }}
-        onSetReminder={handleSetReminder}
+        reminderDialogOpen={showReminderDialog}
+        setReminderDialogOpen={setShowReminderDialog}
+        handleConfirmReminder={handleSetReminder}
       />
 
       <DismissConfirmDialog
         open={showDismissDialog}
-        onClose={() => {
-          setShowDismissDialog(false);
-          setSelectedPatientForAction(null);
-        }}
+        setOpen={setShowDismissDialog}
+        patientName={selectedPatientForAction ? patients.find(p => p.id === selectedPatientForAction)?.patientName || '' : ''}
         onConfirm={handleConfirmDismiss}
       />
     </div>

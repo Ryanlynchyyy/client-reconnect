@@ -1,6 +1,5 @@
-
 import React from 'react';
-import { Calendar, Clock, Filter, User, ScrollText, X } from 'lucide-react';
+import { Calendar, Clock, Filter, Search, User, ScrollText, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
