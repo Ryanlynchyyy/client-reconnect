@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
 import { PatientWithFollowUpStatus, ClinikoAppointment, ClinikoPatient, ClinikioPractitioner } from '@/types/clinikoTypes';
 import { clinikoApi } from '@/services/clinikoApi';
@@ -110,6 +111,11 @@ export const FollowUpProvider: React.FC<{ children: ReactNode }> = ({ children }
         
         const followUpStatus = Math.random() < 0.8 ? 'pending' : 'contacted';
         
+        // Add mock data for additional filtering criteria
+        const isInitialAppointment = index % 3 === 0; // Every third patient is an initial appointment
+        const daysSinceFirstAppointment = isInitialAppointment ? Math.floor(Math.random() * 21) : null; // Random days for initials (0-20 days)
+        const hasRecentCancellation = index % 5 === 0; // Every fifth patient has a cancelled appointment
+        
         // Add mock treatment notes
         const treatmentNotes = mockTreatmentNotes[Math.floor(Math.random() * mockTreatmentNotes.length)];
         
@@ -122,7 +128,11 @@ export const FollowUpProvider: React.FC<{ children: ReactNode }> = ({ children }
           assignedPractitionerId,
           practitionerName,
           treatmentNotes,
-          reminderDate: null
+          reminderDate: null,
+          isInitialAppointment,
+          daysSinceFirstAppointment,
+          hasRecentCancellation,
+          lastAppointmentType: isInitialAppointment ? 'Initial Consultation' : 'Follow-up'
         };
       }));
       

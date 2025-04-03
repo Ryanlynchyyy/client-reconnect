@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useFollowUp } from '@/contexts/FollowUpContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,9 +5,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
-import { MessageSquare, Check } from 'lucide-react';
+import { MessageSquare, Check, CalendarX, Calendar } from 'lucide-react';
 import EnhancedFilters from './EnhancedFilters';
 import StatCards from './StatCards';
+import { 
+  TimeBasedFilters,
+  TimeFilterType,
+  AppointmentStatusType
+} from './TimeBasedFilters';
 
 const EnhancedFollowUpDashboard = () => {
   const { 
@@ -31,8 +35,10 @@ const EnhancedFollowUpDashboard = () => {
   });
   const [appointmentTypes] = useState(['Initial Consultation', 'Follow-up', 'Treatment', 'Assessment']);
   const [selectedAppointmentTypes, setSelectedAppointmentTypes] = useState<string[]>([]);
-  const [timeFilter, setTimeFilter] = useState<'all' | 'initial-2-weeks' | 'last-30-days' | 'last-90-days'>('all');
-  const [showCancelledOnly, setShowCancelledOnly] = useState(false);
+
+  const [timeFilter, setTimeFilter] = useState<TimeFilterType>('all');
+  const [appointmentStatusFilter, setAppointmentStatusFilter] = useState<AppointmentStatusType>('all');
+  const [showFiltersExpanded, setShowFiltersExpanded] = useState(false);
   
   const getPractitionerColor = (practitionerId?: number) => {
     if (!practitionerId) return "bg-gray-100 text-gray-800";
@@ -52,40 +58,36 @@ const EnhancedFollowUpDashboard = () => {
     const matchesPractitioner = !selectedPractitionerId || 
       patient.assignedPractitionerId === selectedPractitionerId;
     
-    // Time filter condition
     let matchesTimeFilter = true;
     if (timeFilter === 'initial-2-weeks') {
-      // Filter for patients within 2 weeks of their initial appointment
       matchesTimeFilter = Boolean(patient.isInitialAppointment && 
-        patient.daysSinceFirstAppointment && 
+        patient.daysSinceFirstAppointment !== undefined && 
         patient.daysSinceFirstAppointment <= 14);
     } else if (timeFilter === 'last-30-days') {
-      // Filter for patients seen in the last 30 days
-      matchesTimeFilter = Boolean(patient.daysSinceLastAppointment && 
+      matchesTimeFilter = Boolean(patient.daysSinceLastAppointment !== undefined && 
         patient.daysSinceLastAppointment <= 30);
     } else if (timeFilter === 'last-90-days') {
-      // Filter for patients seen in the last 90 days
-      matchesTimeFilter = Boolean(patient.daysSinceLastAppointment && 
+      matchesTimeFilter = Boolean(patient.daysSinceLastAppointment !== undefined && 
         patient.daysSinceLastAppointment <= 90);
     }
 
-    // Cancelled appointment condition
-    const matchesCancelled = !showCancelledOnly || 
-      Boolean(patient.hasRecentCancellation);
+    let matchesAppointmentStatus = true;
+    if (appointmentStatusFilter === 'cancelled') {
+      matchesAppointmentStatus = Boolean(patient.hasRecentCancellation);
+    } else if (appointmentStatusFilter === 'active') {
+      matchesAppointmentStatus = !patient.hasRecentCancellation;
+    }
     
-    // Gap days condition
-    const matchesGapDays = !patient.daysSinceLastAppointment || 
+    const matchesGapDays = patient.daysSinceLastAppointment === undefined || 
       patient.daysSinceLastAppointment >= minGapDays;
     
-    // Appointment type filtering
     const matchesAppointmentType = selectedAppointmentTypes.length === 0 || 
       (patient.lastAppointmentType && selectedAppointmentTypes.includes(patient.lastAppointmentType));
     
     return matchesSearch && matchesPractitioner && matchesTimeFilter && 
-           matchesCancelled && matchesGapDays && matchesAppointmentType;
+           matchesAppointmentStatus && matchesGapDays && matchesAppointmentType;
   });
 
-  // Group patients by follow-up status for the stats cards
   const groupedPatients = {
     all: filteredPatients,
     pending: filteredPatients.filter(p => p.followUpStatus === 'pending'),
@@ -93,7 +95,6 @@ const EnhancedFollowUpDashboard = () => {
     dismissed: filteredPatients.filter(p => p.followUpStatus === 'dismissed')
   };
 
-  // Group patients by time ranges for the stats cards
   const rangePatients = {
     '30-60': filteredPatients.filter(p => 
       p.daysSinceLastAppointment && p.daysSinceLastAppointment >= 30 && p.daysSinceLastAppointment < 60
@@ -106,7 +107,6 @@ const EnhancedFollowUpDashboard = () => {
     )
   };
 
-  // Collect cancelled appointments for the stats
   const cancelledAppointments = filteredPatients
     .filter(p => p.hasRecentCancellation)
     .map(p => ({
@@ -123,6 +123,15 @@ const EnhancedFollowUpDashboard = () => {
         </p>
       </div>
       
+      <TimeBasedFilters 
+        selectedTimeFilter={timeFilter}
+        onTimeFilterChange={setTimeFilter}
+        appointmentStatusFilter={appointmentStatusFilter}
+        onAppointmentStatusChange={setAppointmentStatusFilter}
+        showFiltersExpanded={showFiltersExpanded}
+        setShowFiltersExpanded={setShowFiltersExpanded}
+      />
+      
       <EnhancedFilters 
         searchTerm={searchTerm}
         setSearchTerm={setSearchTerm}
@@ -136,13 +145,12 @@ const EnhancedFollowUpDashboard = () => {
         appointmentTypes={appointmentTypes}
         selectedAppointmentTypes={selectedAppointmentTypes}
         setSelectedAppointmentTypes={setSelectedAppointmentTypes}
-        timeFilter={timeFilter}
-        setTimeFilter={setTimeFilter}
-        showCancelledOnly={showCancelledOnly}
-        setShowCancelledOnly={setShowCancelledOnly}
+        timeFilter={timeFilter as any}
+        setTimeFilter={setTimeFilter as any}
+        showCancelledOnly={appointmentStatusFilter === 'cancelled'}
+        setShowCancelledOnly={(show) => setAppointmentStatusFilter(show ? 'cancelled' : 'all')}
       />
       
-      {/* Add stat cards to show filtered patient counts */}
       <StatCards 
         filteredPatients={filteredPatients}
         groupedPatients={groupedPatients}
@@ -161,7 +169,28 @@ const EnhancedFollowUpDashboard = () => {
       
       <Card>
         <CardHeader>
-          <CardTitle>Patient Follow-ups</CardTitle>
+          <div className="flex justify-between items-center">
+            <CardTitle className="text-xl">
+              Patient Follow-ups
+              {timeFilter !== 'all' && (
+                <span className="text-sm ml-2 font-normal text-blue-600">
+                  {timeFilter === 'initial-2-weeks' ? '(Initial appointments within 2 weeks)' : 
+                   timeFilter === 'last-30-days' ? '(Last 30 days)' : 
+                   '(Last 90 days)'}
+                </span>
+              )}
+            </CardTitle>
+            <div className="flex gap-1 text-sm">
+              <Badge variant="outline" className="bg-blue-50 text-blue-700">
+                <Calendar className="h-3 w-3 mr-1" />
+                {filteredPatients.filter(p => p.isInitialAppointment).length} Initial
+              </Badge>
+              <Badge variant="outline" className="bg-red-50 text-red-700">
+                <CalendarX className="h-3 w-3 mr-1" />
+                {filteredPatients.filter(p => p.hasRecentCancellation).length} Cancelled
+              </Badge>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <Table>
@@ -206,26 +235,28 @@ const EnhancedFollowUpDashboard = () => {
                       )}
                     </TableCell>
                     <TableCell>
-                      {patient.hasFutureAppointment ? (
-                        <Badge className="bg-green-500">Future Appointment</Badge>
-                      ) : (
-                        <Badge 
-                          variant={
-                            patient.followUpStatus === 'pending' ? 'default' :
-                            patient.followUpStatus === 'contacted' ? 'outline' : 'secondary'
-                          }
-                        >
-                          {patient.followUpStatus === 'pending' && 'Needs Follow-Up'}
-                          {patient.followUpStatus === 'contacted' && 'Contacted'}
-                          {patient.followUpStatus === 'dismissed' && 'Dismissed'}
-                        </Badge>
-                      )}
-                      {patient.isInitialAppointment && (
-                        <Badge className="ml-2 bg-blue-500">Initial Visit</Badge>
-                      )}
-                      {patient.hasRecentCancellation && (
-                        <Badge className="ml-2 bg-red-500">Cancelled</Badge>
-                      )}
+                      <div className="flex flex-wrap gap-1">
+                        {patient.hasFutureAppointment ? (
+                          <Badge className="bg-green-500 text-white">Future Appointment</Badge>
+                        ) : (
+                          <Badge 
+                            variant={
+                              patient.followUpStatus === 'pending' ? 'default' :
+                              patient.followUpStatus === 'contacted' ? 'outline' : 'secondary'
+                            }
+                          >
+                            {patient.followUpStatus === 'pending' && 'Needs Follow-Up'}
+                            {patient.followUpStatus === 'contacted' && 'Contacted'}
+                            {patient.followUpStatus === 'dismissed' && 'Dismissed'}
+                          </Badge>
+                        )}
+                        {patient.isInitialAppointment && (
+                          <Badge className="bg-blue-500 text-white">Initial Visit</Badge>
+                        )}
+                        {patient.hasRecentCancellation && (
+                          <Badge className="bg-red-500 text-white">Cancelled</Badge>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex space-x-2">
@@ -253,7 +284,7 @@ const EnhancedFollowUpDashboard = () => {
               ) : (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-8">
-                    No patients found
+                    No patients found matching your filters
                   </TableCell>
                 </TableRow>
               )}
