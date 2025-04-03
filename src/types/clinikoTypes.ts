@@ -1,4 +1,3 @@
-
 export interface ClinikoApiResponse<T> {
   total_entries: number;
   total_pages: number;
@@ -85,23 +84,18 @@ export interface ClinikioPractitioner {
 }
 
 export interface PatientWithFollowUpStatus extends ClinikoPatient {
-  lastAppointmentDate: string | null;
-  daysSinceLastAppointment: number | null;
-  followUpStatus: 'pending' | 'dismissed' | 'contacted';
-  hasFutureAppointment: boolean;
+  followUpStatus: 'pending' | 'contacted' | 'dismissed';
+  hasFutureAppointment?: boolean;
+  daysSinceLastAppointment?: number;
+  practitionerName?: string;
+  lastAppointmentDate?: string;
   assignedPractitionerId?: number;
-  treatmentNotes?: string | null;
-  reminderDate?: string | null;
-  practitionerName?: string | null;
-  
-  // Added properties to fix the TypeScript errors
+  lastAppointmentType?: string;
   isInitialAppointment?: boolean;
-  daysSinceFirstAppointment?: number | null;
+  daysSinceFirstAppointment?: number;
   hasRecentCancellation?: boolean;
-  lastAppointmentType?: string | null;
 }
 
-// New interfaces for WorkCover tracking
 export interface WorkCoverReferral {
   id: number;
   patientId: number;
@@ -119,7 +113,6 @@ export interface PatientWithWorkCover extends PatientWithFollowUpStatus {
   workCoverReferrals?: WorkCoverReferral[];
 }
 
-// Interface for booking gap detection
 export interface BookingGap {
   patientId: number;
   lastAppointmentDate: string;
